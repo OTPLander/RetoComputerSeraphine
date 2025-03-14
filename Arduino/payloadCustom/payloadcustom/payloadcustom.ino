@@ -23,6 +23,8 @@ SI1141 si1141;
 M3BDemoHelper m3bDemo;
 //TxData[8];
 // input new EUI
+uint32_t cnt = 0;
+uint8_t TxData[8];
 uint8_t eui64[8] = {0x70, 0xb3, 0xd5, 0x67, 0x70, 0x11, 0x01, 0x98};
 uint8_t shortAdress[2] = {eui64[6], eui64[7]}; // get the last two byte as the short address
 
@@ -60,10 +62,10 @@ Wire2.begin();
 if (ms5637.begin(Wire2) == false)
 {
 SerialM3B.println("MS5637 sensor did not respond. Please check wiring.");
-while(1);
 }
 sht31.begin(0x44, &Wire2);
 si1141.begin(&Wire2);
+pinMode(BLUE_LED, OUTPUT);
 //Code for initial one-time setting of the network key, will only be executed if the constant SET_NETWORKKEY was defined previously
 //#ifdef SET_NETWORKKEY
 // assign new EUI and Network Key
@@ -101,22 +103,25 @@ SerialM3B.print("-");}
 
 
 void loop(){
-
-  digitalWrite(BLUE_LED, LOW);
+digitalWrite(BLUE_LED, LOW);
 sendData();
 digitalWrite(BLUE_LED, HIGH);
+delay(1000);
 }
 void sendData() {
-int TxData[8];
-TxData[0]=01000101b;
-TxData[1]=01000101b;
-TxData[2]=01000101b;
-TxData[3]=01000101b;
-TxData[4]=01000101b;
-TxData[5]=01000101b;
-TxData[6]=01000101b;
-TxData[7]=01000101b;
-//#miotyAtClient_sendData(&TxData);
-delay(1000);
+    // 16bitKeyboard (2 bytes)
+    TxData[0] = 0x00;  // Parte alta del número (big-endian)
+    TxData[1] = 0x01;  // Parte baja del número
+
+    // 16bitNoise (2 bytes)
+    TxData[2] = 0x00;  // Parte alta
+    TxData[3] = 0x02;  // Parte baja
+
+    // 32bitIdKey (4 bytes) → ID de 32 bits en big-endian
+    TxData[4] = 0x00;  // Byte más significativo
+    TxData[5] = 0x00;
+    TxData[6] = 0x00;
+    TxData[7] = 0x03;  // Byte menos significativo
+miotyAtClient_sendMessageUniMPF(TxData, 8, &cnt);
 //SerialM3B.println("");
 }
