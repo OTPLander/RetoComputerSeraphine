@@ -1,7 +1,9 @@
+#include <m3bDemoHelper.h>
+#include <m3b_sensors/si1141.h>
+
+
 // Libraries for Sensor use, MIOTY and M3 Board
 #include <miotyAtClient.h>
-#include "m3bDemoHelper.h"
-#include "m3b_sensors/si1141.h"
 #include <SHT31.h>
 #include <SparkFun_MS5637_Arduino_Library.h>
 #include <Keypad.h>
@@ -19,8 +21,9 @@ MS5637 ms5637;
 SHT31 sht31;
 SI1141 si1141;
 M3BDemoHelper m3bDemo;
+//TxData[8];
 // input new EUI
-uint8_t eui64[8] = {0x70, 0xb3, 0xd5, 0x67, 0x70, 0x11, 0x01, 0x72};
+uint8_t eui64[8] = {0x70, 0xb3, 0xd5, 0x67, 0x70, 0x11, 0x01, 0x98};
 uint8_t shortAdress[2] = {eui64[6], eui64[7]}; // get the last two byte as the short address
 
 // input new Network Key
@@ -100,43 +103,20 @@ SerialM3B.print("-");}
 void loop(){
 
   digitalWrite(BLUE_LED, LOW);
-float temperature = sendWeatherData();
+sendData();
 digitalWrite(BLUE_LED, HIGH);
-delay(3000);
 }
-float sendWeatherData() {
-        char key = keypad.getKey();
-    if (key) {
-        SerialM3B.print("Tecla presionada: ");
-        SerialM3B.println(key);
-    }
-  int micValue = analogRead(MIC_PIN); // Leer el valor del micrófono
-    SerialM3B.print("Nivel de sonido: ");
-    SerialM3B.println(micValue); // Enviar el valor del micrófono al monitor serial
-// readout of weather data; humidity in %, temperature in °C, pressure in hPa
-float pres=0., temp=0., hum=0.;
-//temp = ms5637.getTemperature();
-temp=key;
-//pres = ms5637.getPressure();
-pres=micValue;
-sht31.read();
-hum = sht31.getHumidity();
-uint16_t lux;
-si1141.readLuminosity(&lux);
-// serial Monitor
-//SerialM3B.println(" ");
-//SerialM3B.print("Pressure [hPa] ");
-//SerialM3B.println(pres);
-//SerialM3B.println(pres * 10);
-//SerialM3B.print("Temperature [°C] ");
-//SerialM3B.println(temp);
-//SerialM3B.println((temp + 273.15)* 10);
-//SerialM3B.print("Humidity ");
-//SerialM3B.println(hum);
-//SerialM3B.print("Luminosity (rawData) ");
-//SerialM3B.print(lux);
-m3bDemo.transmitWeather(pres, temp, hum, lux);
-delay(4000);
+void sendData() {
+int TxData[8];
+TxData[0]=01000101b;
+TxData[1]=01000101b;
+TxData[2]=01000101b;
+TxData[3]=01000101b;
+TxData[4]=01000101b;
+TxData[5]=01000101b;
+TxData[6]=01000101b;
+TxData[7]=01000101b;
+//#miotyAtClient_sendData(&TxData);
+delay(1000);
 //SerialM3B.println("");
-return temp;
 }

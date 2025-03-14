@@ -1,6 +1,6 @@
 {
     "version": "1.0",
-    "typeEui": "70b3d56770110179",
+    "typeEui": "70b3d56770110198",
     "meta": {
         "name": "Library_Checker",
         "vendor": "Computer_Science"
@@ -29,7 +29,7 @@
         "16bitKeyboard": {
             "size": 16,
             "type": "int",
-            "func": "$/100",
+            "func": "$/1",
             "unit": "key",
             "littleEndian": false
         },
@@ -43,7 +43,7 @@
         "32bitIdKey": {
             "size": 32,
             "type": "int",
-            "func": "$/100",
+            "func": "$/1",
             "unit": "id",
             "littleEndian": false
         }
