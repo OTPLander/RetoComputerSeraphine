@@ -4,46 +4,58 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Study Room Monitor</title>
-    <style>
-        svg {
-            width: 80%;
-            height: auto;
-            display: block;
-            margin: auto;
-        }
-        .room {
-            fill: lightblue;
-            stroke: black;
-            stroke-width: 2px;
-            cursor: pointer;
-        }
-        .room:hover {
-            fill: orange;
-        }
-    </style>
-    <script>
-        function showData(section) {
-            alert("You clicked on " + section);
-            // Later, we will fetch real data here!
-        }
-    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1 style="text-align:center;">Study Room Monitor</h1>
-    <p style="text-align:center;">Click on a section to view data.</p>
+    <h1>Study Room Monitor</h1>
+    <p>Click on a section to view data.</p>
 
-    <svg viewBox="0 0 500 300">
-        <!-- Room 1 -->
-        <rect class="room" x="50" y="50" width="150" height="100" onclick="showData('Room 1')"/>
-        <text x="125" y="110" text-anchor="middle" font-size="16" fill="black">Room 1</text>
+    <svg viewBox="0 0 1000 600">
+        <!-- Room Edison -->
+        <rect class="room" x="50" y="50" width="150" height="100" onclick="showData('Edison')"/>
+        <text x="125" y="110" text-anchor="middle" font-size="16" fill="black">Edison</text>
 
-        <!-- Room 2 -->
-        <rect class="room" x="250" y="50" width="150" height="100" onclick="showData('Room 2')"/>
-        <text x="325" y="110" text-anchor="middle" font-size="16" fill="black">Room 2</text>
+        <!-- Room Galileo -->
+        <rect class="room" x="250" y="50" width="150" height="100" onclick="showData('Galileo')"/>
+        <text x="325" y="110" text-anchor="middle" font-size="16" fill="black">Galileo</text>
 
-        <!-- Room 3 -->
-        <rect class="room" x="150" y="180" width="150" height="100" onclick="showData('Room 3')"/>
-        <text x="225" y="240" text-anchor="middle" font-size="16" fill="black">Room 3</text>
+        <!-- Room Gutenberg -->
+        <rect class="room" x="450" y="50" width="150" height="100" onclick="showData('Gutenberg')"/>
+        <text x="525" y="110" text-anchor="middle" font-size="16" fill="black">Gutenberg</text>
+
+        <!-- Room Marconi -->
+        <rect class="room" x="650" y="50" width="150" height="100" onclick="showData('Marconi')"/>
+        <text x="725" y="110" text-anchor="middle" font-size="16" fill="black">Marconi</text>
+
+        <!-- Room Nobel -->
+        <rect class="room" x="850" y="50" width="150" height="100" onclick="showData('Nobel')"/>
+        <text x="925" y="110" text-anchor="middle" font-size="16" fill="black">Nobel</text>
+
+        <!-- Room Elhuyar -->
+        <rect class="room" x="50" y="180" width="150" height="100" onclick="showData('Elhuyar')"/>
+        <text x="125" y="240" text-anchor="middle" font-size="16" fill="black">Elhuyar</text>
+
+        <!-- Room Gauss -->
+        <rect class="room" x="250" y="180" width="150" height="100" onclick="showData('Gauss')"/>
+        <text x="325" y="240" text-anchor="middle" font-size="16" fill="black">Gauss</text>
+
+        <!-- Room Joule -->
+        <rect class="room" x="450" y="180" width="150" height="100" onclick="showData('Joule')"/>
+        <text x="525" y="240" text-anchor="middle" font-size="16" fill="black">Joule</text>
+
+        <!-- Room Marie Curie -->
+        <rect class="room" x="650" y="180" width="150" height="100" onclick="showData('Marie Curie')"/>
+        <text x="725" y="240" text-anchor="middle" font-size="16" fill="black">Marie Curie</text>
+
+        <!-- Room Newton -->
+        <rect class="room" x="850" y="180" width="150" height="100" onclick="showData('Newton')"/>
+        <text x="925" y="240" text-anchor="middle" font-size="16" fill="black">Newton</text>
     </svg>
+
+    <script>
+        function showData(roomName) {
+            alert('You clicked on ' + roomName);
+        }
+    </script>
 </body>
 </html>
