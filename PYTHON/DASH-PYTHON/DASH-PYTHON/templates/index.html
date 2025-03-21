@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Room Monitor</title>
+    <style>
+        svg {
+            width: 80%;
+            height: auto;
+            display: block;
+            margin: auto;
+        }
+        .room {
+            fill: lightblue;
+            stroke: black;
+            stroke-width: 2px;
+            cursor: pointer;
+        }
+        .room:hover {
+            fill: orange;
+        }
+    </style>
+    <script>
+        function showData(section) {
+            alert("You clicked on " + section);
+            // Later, we will fetch real data here!
+        }
+    </script>
+</head>
+<body>
+    <h1 style="text-align:center;">Study Room Monitor</h1>
+    <p style="text-align:center;">Click on a section to view data.</p>
+
+    <svg viewBox="0 0 500 300">
+        <!-- Room 1 -->
+        <rect class="room" x="50" y="50" width="150" height="100" onclick="showData('Room 1')"/>
+        <text x="125" y="110" text-anchor="middle" font-size="16" fill="black">Room 1</text>
+
+        <!-- Room 2 -->
+        <rect class="room" x="250" y="50" width="150" height="100" onclick="showData('Room 2')"/>
+        <text x="325" y="110" text-anchor="middle" font-size="16" fill="black">Room 2</text>
+
+        <!-- Room 3 -->
+        <rect class="room" x="150" y="180" width="150" height="100" onclick="showData('Room 3')"/>
+        <text x="225" y="240" text-anchor="middle" font-size="16" fill="black">Room 3</text>
+    </svg>
+</body>
+</html>
