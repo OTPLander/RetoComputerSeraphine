@@ -1,0 +1,51 @@
+{
+    "version": "1.0",
+    "typeEui": "70b3d56770110198",
+    "meta": {
+        "name": "Library_Checker",
+        "vendor": "Computer_Science"
+    },
+    "uplink": [
+        {
+            "id": 0,
+            "crypto": 0,
+            "payload": [
+                {
+                    "name": "keypad",
+                    "component": "16bitKeyboard"
+                },
+                {
+                    "name": "noise",
+                    "component": "16bitNoise"
+                },
+                {
+                    "name": "",
+                    "component": "32bitIdKey"
+                }
+            ]
+        }
+    ],
+    "component": {
+        "16bitKeyboard": {
+            "size": 16,
+            "type": "int",
+            "func": "$/1",
+            "unit": "key",
+            "littleEndian": false
+        },
+        "16bitNoise": {
+            "size": 16,
+            "type": "int",
+            "func": "$/100",
+            "unit": "relative_noise",
+            "littleEndian": false
+        },
+        "32bitIdKey": {
+            "size": 32,
+            "type": "int",
+            "func": "$/1",
+            "unit": "id",
+            "littleEndian": false
+        }
+    }
+}
