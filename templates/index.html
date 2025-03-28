@@ -3,58 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Study Room Monitor</title>
+    <title>Study Room Monitor - Tecnun</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <h1>Study Room Monitor</h1>
-    <p>Click on a section to view data.</p>
+    <header class="white-section">
+        <div class="header-container">
+            <img src="{{ url_for('static', filename='images/tecnun-logo.png') }}" alt="Tecnun Logo" class="logo">
+            <h1>Study Room Monitor</h1>
+        </div>
+    </header>
 
-    <svg viewBox="0 0 1000 600">
-        <!-- Room Edison -->
-        <rect class="room" x="50" y="50" width="150" height="100" onclick="showData('Edison')"/>
-        <text x="125" y="110" text-anchor="middle" font-size="16" fill="black">Edison</text>
+    <main>
+        <section class="white-section">
+            <div class="content-wrapper">
+                <h2>Available Study Rooms</h2>
+                <p class="subtitle">Select a room to view current status and sound levels</p>
 
-        <!-- Room Galileo -->
-        <rect class="room" x="250" y="50" width="150" height="100" onclick="showData('Galileo')"/>
-        <text x="325" y="110" text-anchor="middle" font-size="16" fill="black">Galileo</text>
+                <div class="rooms-grid">
+                    <div class="room-card" onclick="showData('Edison')">
+                        <div class="room-color red"></div>
+                        <h3>Edison Room</h3>
+                        <div class="room-status available">Available</div>
+                        <div class="sound-level">
+                            <div class="level-bar" style="width: 30%"></div>
+                            <span>32 dB</span>
+                        </div>
+                    </div>
 
-        <!-- Room Gutenberg -->
-        <rect class="room" x="450" y="50" width="150" height="100" onclick="showData('Gutenberg')"/>
-        <text x="525" y="110" text-anchor="middle" font-size="16" fill="black">Gutenberg</text>
+                    <div class="room-card" onclick="showData('Galileo')">
+                        <div class="room-color black"></div>
+                        <h3>Galileo Room</h3>
+                        <div class="room-status occupied">Occupied</div>
+                        <div class="sound-level">
+                            <div class="level-bar" style="width: 65%"></div>
+                            <span>68 dB</span>
+                        </div>
+                    </div>
 
-        <!-- Room Marconi -->
-        <rect class="room" x="650" y="50" width="150" height="100" onclick="showData('Marconi')"/>
-        <text x="725" y="110" text-anchor="middle" font-size="16" fill="black">Marconi</text>
+                    <!-- More room cards... -->
+                </div>
+            </div>
+        </section>
 
-        <!-- Room Nobel -->
-        <rect class="room" x="850" y="50" width="150" height="100" onclick="showData('Nobel')"/>
-        <text x="925" y="110" text-anchor="middle" font-size="16" fill="black">Nobel</text>
+        <section class="black-section">
+            <div class="content-wrapper">
+                <h2>Room Details</h2>
+                <div id="roomDetails" class="room-details">
+                    <p>Select a room to view detailed information</p>
+                </div>
+            </div>
+        </section>
 
-        <!-- Room Elhuyar -->
-        <rect class="room" x="50" y="180" width="150" height="100" onclick="showData('Elhuyar')"/>
-        <text x="125" y="240" text-anchor="middle" font-size="16" fill="black">Elhuyar</text>
+        <section class="white-section">
+            <div class="content-wrapper">
+                <h2>Usage Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">87%</div>
+                        <div class="stat-label">Average Occupancy</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">42 dB</div>
+                        <div class="stat-label">Average Sound Level</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">14</div>
+                        <div class="stat-label">Peak Hours</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
 
-        <!-- Room Gauss -->
-        <rect class="room" x="250" y="180" width="150" height="100" onclick="showData('Gauss')"/>
-        <text x="325" y="240" text-anchor="middle" font-size="16" fill="black">Gauss</text>
-
-        <!-- Room Joule -->
-        <rect class="room" x="450" y="180" width="150" height="100" onclick="showData('Joule')"/>
-        <text x="525" y="240" text-anchor="middle" font-size="16" fill="black">Joule</text>
-
-        <!-- Room Marie Curie -->
-        <rect class="room" x="650" y="180" width="150" height="100" onclick="showData('Marie Curie')"/>
-        <text x="725" y="240" text-anchor="middle" font-size="16" fill="black">Marie Curie</text>
-
-        <!-- Room Newton -->
-        <rect class="room" x="850" y="180" width="150" height="100" onclick="showData('Newton')"/>
-        <text x="925" y="240" text-anchor="middle" font-size="16" fill="black">Newton</text>
-    </svg>
+    <footer class="red-section">
+        <div class="content-wrapper">
+            <p>© 2025 Tecnun - University of Navarra</p>
+        </div>
+    </footer>
 
     <script>
         function showData(roomName) {
-            alert('You clicked on ' + roomName);
+            // Update room details section
+            const roomDetails = document.getElementById('roomDetails');
+            roomDetails.innerHTML = `
+                    <h3>${roomName} Room</h3>
+                    <div class="detail-grid">
+                        <div class="detail-card">
+                            <h4>Current Status</h4>
+                            <div class="detail-value available">Available</div>
+                        </div>
+                        <div class="detail-card">
+                            <h4>Sound Level</h4>
+                            <div class="sound-level">
+                                <div class="level-bar" style="width: 45%"></div>
+                                <span>47 dB</span>
+                            </div>
+                        </div>
+                        <div class="detail-card">
+                            <h4>Capacity</h4>
+                            <div class="detail-value">12 people</div>
+                        </div>
+                        <div class="detail-card">
+                            <h4>Last Updated</h4>
+                            <div class="detail-value">${new Date().toLocaleTimeString()}</div>
+                        </div>
+                    </div>
+                    <div class="room-description">
+                        <h4>About This Room</h4>
+                        <p>The ${roomName} Room is equipped with sound monitoring technology to ensure optimal study conditions. Located on the 2nd floor, it features natural lighting and ergonomic furniture.</p>
+                    </div>
+                `;
+
+            // Scroll to details section
+            document.querySelector('.black-section').scrollIntoView({ behavior: 'smooth' });
         }
     </script>
 </body>
