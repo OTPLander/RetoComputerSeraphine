@@ -427,3 +427,43 @@ footer {
 .admin-link a:hover {
     background-color: #d32f2f;
 }
+/* Add to existing styles.css */
+.action-btn {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    margin: 2px;
+    text-decoration: none;
+    display: inline-block;
+}
+
+    .action-btn.edit {
+        background-color: #2196F3;
+        color: white;
+    }
+
+    .action-btn.delete {
+        background-color: #f44336;
+        color: white;
+    }
+
+    .action-btn:hover {
+        opacity: 0.8;
+    }
+
+.actions {
+    display: flex;
+    gap: 5px;
+}
+
+/* Add this to make forms in tables look better */
+.admin-table form {
+    display: inline;
+}
+
+/* Add this for the edit user form */
+.form-group label input[type="checkbox"] {
+    margin-left: 10px;
+}

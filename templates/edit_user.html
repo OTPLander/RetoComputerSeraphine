@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit User - Study Room Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="white-section">
+        <div class="header-container">
+            <img src="{{ url_for('static', filename='images/tecnun-logo.png') }}" alt="Tecnun Logo" class="logo">
+            <h1>Edit User</h1>
+        </div>
+    </header>
+
+    <main>
+        <section class="white-section">
+            <div class="content-wrapper">
+                <h2>Edit User Information</h2>
+
+                {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                    <div class="flash-message">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                <form method="POST" action="{{ url_for('edit_user', user_id=user.id) }}">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" value="{{ user.username }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" value="{{ user.email }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" name="is_admin" {% if user.is_admin %}checked{% endif %}>
+                            Admin User
+                        </label>
+                    </div>
+                    <button type="submit" class="login-button">Update User</button>
+                    <a href="{{ url_for('admin_dashboard') }}" class="login-button" style="background-color: #666; text-decoration: none; display: inline-block; text-align: center;">Cancel</a>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <footer class="red-section">
+        <div class="content-wrapper">
+            <p>&copy; 2025 Tecnun - University of Navarra</p>
+        </div>
+    </footer>
+</body>
+</html>

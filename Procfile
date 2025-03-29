@@ -1,1 +1,1 @@
-web: python DASH_PYTHON.py
+web: python main.py
