@@ -63,15 +63,27 @@ def admin_dashboard():
     return render_template('admin_dashboard.html', users=users)
 
 def send_email(to, subject, body):
-    msg = MIMEText(body)
-    msg['Subject'] = subject
-    msg['From'] = app.config['MAIL_DEFAULT_SENDER']
-    msg['To'] = to
-    
-    with smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT']) as server:
-        server.starttls()
-        server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
-        server.send_message(msg)
+    try:
+        print(f"Attempting to send email to {to}")  # This will appear in logs
+        
+        msg = MIMEText(body)
+        msg['Subject'] = subject
+        msg['From'] = app.config['MAIL_DEFAULT_SENDER']
+        msg['To'] = to
+        
+        with smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT']) as server:
+            print(f"Connecting to SMTP server {app.config['MAIL_SERVER']}:{app.config['MAIL_PORT']}")
+            server.starttls()
+            print("TLS started")
+            server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+            print("Login successful")
+            server.send_message(msg)
+            print("Email sent successfully")
+            
+        return True
+    except Exception as e:
+        print(f"Email sending failed: {str(e)}")
+        return False
 
 # User model
 # Update the User model in main.py
