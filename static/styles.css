@@ -467,3 +467,357 @@ footer {
 .form-group label input[type="checkbox"] {
     margin-left: 10px;
 }
+
+/* Añadir a styles.css */
+.time-slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.time-slot {
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+    .time-slot input[type="radio"] {
+        display: none;
+    }
+
+        .time-slot input[type="radio"]:checked + label {
+            font-weight: bold;
+            color: var(--tecnun-red);
+        }
+
+.reserve-button {
+    padding: 0 20px 20px;
+}
+
+    .reserve-button .btn {
+        display: block;
+        background-color: var(--tecnun-red);
+        color: white;
+        text-align: center;
+        padding: 8px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+        .reserve-button .btn:hover {
+            background-color: #d32f2f;
+        }
+
+/* Estilos para la página de reservas */
+.my-reservations {
+    margin: 30px 0;
+}
+
+.reservation-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+    .reservation-card h3 {
+        margin-top: 0;
+        color: var(--tecnun-red);
+    }
+
+.reservation-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+/* Estilos para el sistema de reservas */
+.user-links {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    display: flex;
+    gap: 15px;
+}
+
+.user-link {
+    color: var(--tecnun-black);
+    text-decoration: none;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 4px;
+    transition: all 0.3s;
+}
+
+    .user-link:hover {
+        background-color: rgba(0,0,0,0.1);
+    }
+
+.room-capacity {
+    padding: 0 20px;
+    margin: 10px 0;
+    font-size: 0.9rem;
+    color: var(--tecnun-dark-gray);
+}
+
+.reserve-actions {
+    padding: 0 20px 20px;
+    display: flex;
+    gap: 10px;
+}
+
+.reserve-btn, .details-btn {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.reserve-btn {
+    background-color: var(--tecnun-red);
+    color: white;
+}
+
+.details-btn {
+    background-color: var(--tecnun-dark-gray);
+    color: white;
+}
+
+.reserve-btn:hover {
+    background-color: #d32f2f;
+}
+
+.details-btn:hover {
+    background-color: #555;
+}
+
+.time-slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.time-slot {
+    background-color: rgba(255,255,255,0.1);
+    padding: 10px;
+    border-radius: 4px;
+    text-align: center;
+    border: 1px solid #444;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+}
+
+.modal-content {
+    background-color: var(--tecnun-white);
+    margin: 10% auto;
+    padding: 30px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 600px;
+    position: relative;
+}
+
+.close-btn {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+
+/* Estilos para el sistema de reservas */
+.reservation-form {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.time-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.time-slot-option input[type="radio"] {
+    display: none;
+}
+
+.time-slot-option label {
+    display: block;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.time-slot-option input[type="radio"]:checked + label {
+    background-color: var(--tecnun-red);
+    color: white;
+    border-color: var(--tecnun-red);
+}
+
+.no-slots {
+    padding: 15px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.submit-btn, .cancel-btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    flex: 1;
+    text-align: center;
+    text-decoration: none;
+}
+
+.submit-btn {
+    background-color: var(--tecnun-red);
+    color: white;
+}
+
+.cancel-btn {
+    background-color: var(--tecnun-dark-gray);
+    color: white;
+}
+
+/* Estilos para la lista de reservas */
+.reservations-list {
+    margin-top: 30px;
+}
+
+.reservation-card {
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    transition: all 0.3s;
+}
+
+    .reservation-card.active {
+        border-left: 4px solid var(--tecnun-red);
+    }
+
+    .reservation-card.past {
+        opacity: 0.7;
+        background-color: #f9f9f9;
+    }
+
+.reservation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.reservation-date {
+    color: var(--tecnun-dark-gray);
+    font-size: 0.9rem;
+}
+
+.reservation-time {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.reservation-actions {
+    text-align: right;
+}
+
+.no-reservations {
+    text-align: center;
+    padding: 40px 0;
+}
+
+    .no-reservations .btn {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: var(--tecnun-red);
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+    }
+
+/* Estilos para el panel de administración */
+.admin-actions {
+    margin-bottom: 30px;
+}
+
+.add-btn {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: var(--tecnun-red);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+    .status-badge.available {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .status-badge.occupied {
+        background-color: #ffebee;
+        color: #d32f2f;
+    }
+
+/* Estilos para formularios de aulas */
+.classroom-form {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+    .classroom-form textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-family: 'Open Sans', sans-serif;
+    }
+
+.classroom-stats {
+    margin-top: 50px;
+    padding-top: 30px;
+    border-top: 1px solid #eee;
+}

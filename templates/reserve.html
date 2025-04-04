@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserve Classroom - Study Room Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="white-section">
+        <div class="header-container">
+            <img src="{{ url_for('static', filename='images/tecnun-logo.png') }}" alt="Tecnun Logo" class="logo">
+            <h1>Reserve {{ classroom.name }} Room</h1>
+        </div>
+    </header>
+
+    <main>
+        <section class="white-section">
+            <div class="content-wrapper">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                <form method="POST" action="{{ url_for('reserve', classroom_id=classroom.id) }}" class="reservation-form">
+                    <div class="form-group">
+                        <label for="date">Select Date</label>
+                        <input type="date" id="date" name="date" min="{{ today }}" value="{{ selected_date }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Available Time Slots</label>
+                        {% if available_slots %}
+                        <div class="time-slots-grid">
+                            {% for slot in available_slots %}
+                            <div class="time-slot-option">
+                                <input type="radio" id="slot{{ loop.index }}" name="time_slot" value="{{ slot.label }}" required>
+                                <label for="slot{{ loop.index }}">{{ slot.label }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="no-slots">No available slots for the selected date</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="submit-btn">Confirm Reservation</button>
+                        <a href="{{ url_for('index') }}" class="cancel-btn">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <footer class="red-section">
+        <div class="content-wrapper">
+            <p>© 2025 Tecnun - University of Navarra</p>
+        </div>
+    </footer>
+
+    <script>
+        // Actualizar slots disponibles cuando cambia la fecha
+        document.getElementById('date').addEventListener('change', function() {
+            const date = this.value;
+            const classroomId = {{ classroom.id }};
+            window.location.href = `/reserve/${classroomId}?date=${date}`;
+        });
+    </script>
+</body>
+</html>

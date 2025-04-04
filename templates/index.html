@@ -17,6 +17,12 @@
                 <a href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
             </div>
             {% endif %}
+            {% if current_user.is_authenticated %}
+            <div class="user-links">
+                <a href="{{ url_for('my_reservations') }}" class="user-link">My Reservations</a>
+                <a href="{{ url_for('logout') }}" class="user-link">Logout</a>
+            </div>
+            {% endif %}
         </div>
     </header>
 
@@ -24,30 +30,29 @@
         <section class="white-section">
             <div class="content-wrapper">
                 <h2>Available Study Rooms</h2>
-                <p class="subtitle">Select a room to view current status and sound levels</p>
+                <p class="subtitle">Select a room to view current status and reserve time slots</p>
 
                 <div class="rooms-grid">
-                    <div class="room-card" onclick="showData('Edison')">
-                        <div class="room-color red"></div>
-                        <h3>Edison Room</h3>
-                        <div class="room-status available">Available</div>
+                    {% for classroom in classrooms %}
+                    <div class="room-card">
+                        <div class="room-color" style="background-color: {{ classroom.color }}"></div>
+                        <h3>{{ classroom.name }} Room</h3>
+                        <div class="room-status {% if classroom.is_occupied %}occupied{% else %}available{% endif %}">
+                            {% if classroom.is_occupied %}Occupied{% else %}Available{% endif %}
+                        </div>
                         <div class="sound-level">
-                            <div class="level-bar" style="width: 30%"></div>
-                            <span>32 dB</span>
+                            <div class="level-bar" style="width: {{ classroom.noise_level }}%"></div>
+                            <span>{{ classroom.noise_level }} dB</span>
+                        </div>
+                        <div class="room-capacity">
+                            Capacity: {{ classroom.capacity }} people
+                        </div>
+                        <div class="reserve-actions">
+                            <a href="{{ url_for('reserve', classroom_id=classroom.id) }}" class="reserve-btn">Reserve</a>
+                            <button class="details-btn" onclick="showRoomDetails('{{ classroom.name }}', {{ classroom.id }})">Details</button>
                         </div>
                     </div>
-
-                    <div class="room-card" onclick="showData('Galileo')">
-                        <div class="room-color black"></div>
-                        <h3>Galileo Room</h3>
-                        <div class="room-status occupied">Occupied</div>
-                        <div class="sound-level">
-                            <div class="level-bar" style="width: 65%"></div>
-                            <span>68 dB</span>
-                        </div>
-                    </div>
-
-                    <!-- More room cards... -->
+                    {% endfor %}
                 </div>
             </div>
         </section>
@@ -56,7 +61,7 @@
             <div class="content-wrapper">
                 <h2>Room Details</h2>
                 <div id="roomDetails" class="room-details">
-                    <p>Select a room to view detailed information</p>
+                    <p>Select a room to view detailed information and available time slots</p>
                 </div>
             </div>
         </section>
@@ -66,15 +71,15 @@
                 <h2>Usage Statistics</h2>
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-value">87%</div>
+                        <div class="stat-value" id="avgOccupancy">87%</div>
                         <div class="stat-label">Average Occupancy</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value">42 dB</div>
+                        <div class="stat-value" id="avgSoundLevel">42 dB</div>
                         <div class="stat-label">Average Sound Level</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value">14</div>
+                        <div class="stat-value" id="peakHours">14</div>
                         <div class="stat-label">Peak Hours</div>
                     </div>
                 </div>
@@ -88,42 +93,102 @@
         </div>
     </footer>
 
-    <script>
-        function showData(roomName) {
-            // Update room details section
-            const roomDetails = document.getElementById('roomDetails');
-            roomDetails.innerHTML = `
-                    <h3>${roomName} Room</h3>
-                    <div class="detail-grid">
-                        <div class="detail-card">
-                            <h4>Current Status</h4>
-                            <div class="detail-value available">Available</div>
-                        </div>
-                        <div class="detail-card">
-                            <h4>Sound Level</h4>
-                            <div class="sound-level">
-                                <div class="level-bar" style="width: 45%"></div>
-                                <span>47 dB</span>
-                            </div>
-                        </div>
-                        <div class="detail-card">
-                            <h4>Capacity</h4>
-                            <div class="detail-value">12 people</div>
-                        </div>
-                        <div class="detail-card">
-                            <h4>Last Updated</h4>
-                            <div class="detail-value">${new Date().toLocaleTimeString()}</div>
-                        </div>
-                    </div>
-                    <div class="room-description">
-                        <h4>About This Room</h4>
-                        <p>The ${roomName} Room is equipped with sound monitoring technology to ensure optimal study conditions. Located on the 2nd floor, it features natural lighting and ergonomic furniture.</p>
-                    </div>
-                `;
+    <!-- Modal para reservas -->
+    <div id="reservationModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3 id="modalRoomName"></h3>
+            <div class="time-slots-container" id="timeSlots">
+                <!-- Las franjas horarias se cargarán aquí -->
+            </div>
+        </div>
+    </div>
 
-            // Scroll to details section
-            document.querySelector('.black-section').scrollIntoView({ behavior: 'smooth' });
+    <script>
+        // Franjas horarias definidas
+        const TIME_SLOTS = [
+            { start: '09:00', end: '10:30', label: '9:00 - 10:30' },
+            { start: '10:30', end: '12:00', label: '10:30 - 12:00' },
+            { start: '12:00', end: '13:30', label: '12:00 - 13:30' },
+            { start: '13:30', end: '15:00', label: '13:30 - 15:00' },
+            { start: '15:00', end: '16:30', label: '15:00 - 16:30' },
+            { start: '16:30', end: '18:00', label: '16:30 - 18:00' },
+            { start: '18:00', end: '19:30', label: '18:00 - 19:30' }
+        ];
+
+        // Mostrar detalles de la sala
+        function showRoomDetails(roomName, roomId) {
+            const today = new Date();
+            const formattedDate = today.toISOString().split('T')[0];
+
+            fetch(`/api/room/${roomId}/availability?date=${formattedDate}`)
+                .then(response => response.json())
+                .then(data => {
+                    const roomDetails = document.getElementById('roomDetails');
+                    const availableSlots = data.available_slots;
+
+                    let slotsHTML = availableSlots.map(slot =>
+                        `<div class="time-slot">${slot.label}</div>`
+                    ).join('');
+
+                    roomDetails.innerHTML = `
+                            <h3>${roomName} Room</h3>
+                            <div class="detail-grid">
+                                <div class="detail-card">
+                                    <h4>Current Status</h4>
+                                    <div class="detail-value ${data.is_occupied ? 'occupied' : 'available'}">
+                                        ${data.is_occupied ? 'Occupied' : 'Available'}
+                                    </div>
+                                </div>
+                                <div class="detail-card">
+                                    <h4>Available Time Slots Today</h4>
+                                    <div class="time-slots">${slotsHTML}</div>
+                                </div>
+                                <div class="detail-card">
+                                    <h4>Capacity</h4>
+                                    <div class="detail-value">${data.capacity} people</div>
+                                </div>
+                            </div>
+                            <div class="room-description">
+                                <h4>About This Room</h4>
+                                <p>${data.description}</p>
+                            </div>
+                            <a href="/reserve/${roomId}" class="reserve-btn">Make Reservation</a>
+                        `;
+
+                    document.querySelector('.black-section').scrollIntoView({ behavior: 'smooth' });
+                });
         }
+
+        // Actualizar datos en tiempo real
+        function updateRoomStatus() {
+            fetch('/api/rooms/status')
+                .then(response => response.json())
+                .then(data => {
+                    // Actualizar estadísticas
+                    document.getElementById('avgOccupancy').textContent = data.avg_occupancy + '%';
+                    document.getElementById('avgSoundLevel').textContent = data.avg_sound_level + ' dB';
+                    document.getElementById('peakHours').textContent = data.peak_hours;
+
+                    // Actualizar estado de las salas (si es necesario)
+                    data.rooms.forEach(room => {
+                        const roomElement = document.querySelector(`.room-card h3:contains("${room.name}")`)?.parentElement;
+                        if (roomElement) {
+                            const statusElement = roomElement.querySelector('.room-status');
+                            statusElement.className = `room-status ${room.is_occupied ? 'occupied' : 'available'}`;
+                            statusElement.textContent = room.is_occupied ? 'Occupied' : 'Available';
+
+                            const soundElement = roomElement.querySelector('.sound-level .level-bar');
+                            soundElement.style.width = `${room.noise_level}%`;
+                            soundElement.nextElementSibling.textContent = `${room.noise_level} dB`;
+                        }
+                    });
+                });
+        }
+
+        // Actualizar cada 30 segundos
+        setInterval(updateRoomStatus, 30000);
+        document.addEventListener('DOMContentLoaded', updateRoomStatus);
     </script>
 </body>
 </html>

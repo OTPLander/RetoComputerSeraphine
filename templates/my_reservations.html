@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Reservations - Study Room Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="white-section">
+        <div class="header-container">
+            <img src="{{ url_for('static', filename='images/tecnun-logo.png') }}" alt="Tecnun Logo" class="logo">
+            <h1>My Reservations</h1>
+        </div>
+    </header>
+
+    <main>
+        <section class="white-section">
+            <div class="content-wrapper">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                {% if reservations %}
+                <div class="reservations-list">
+                    {% for reservation in reservations %}
+                    <div class="reservation-card {% if reservation.is_active() %}active{% else %}past{% endif %}">
+                        <div class="reservation-header">
+                            <h3>{{ reservation.classroom.name }} Room</h3>
+                            <span class="reservation-date">{{ reservation.start_time.strftime('%A, %d %B %Y') }}</span>
+                        </div>
+                        <div class="reservation-time">
+                            {{ reservation.start_time.strftime('%H:%M') }} - {{ reservation.end_time.strftime('%H:%M') }}
+                        </div>
+                        <div class="reservation-actions">
+                            {% if reservation.is_active() %}
+                            <form method="POST" action="{{ url_for('cancel_reservation', reservation_id=reservation.id) }}"
+                                  onsubmit="return confirm('Are you sure you want to cancel this reservation?');">
+                                <button type="submit" class="cancel-btn">Cancel</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="no-reservations">
+                    <p>You don't have any reservations yet.</p>
+                    <a href="{{ url_for('index') }}" class="btn">Find a Classroom</a>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+    </main>
+
+    <footer class="red-section">
+        <div class="content-wrapper">
+            <p>� 2025 Tecnun - University of Navarra</p>
+        </div>
+    </footer>
+</body>
+</html>
