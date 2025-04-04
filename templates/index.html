@@ -10,13 +10,17 @@
 <body>
     <header class="white-section">
         <div class="header-container">
-            <img src="{{ url_for('static', filename='images/tecnun-logo.png') }}" alt="Tecnun Logo" class="logo">
-            <h1>Study Room Monitor</h1>
             {% if current_user.is_authenticated and current_user.is_admin %}
             <div class="admin-link">
                 <a href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
             </div>
             {% endif %}
+
+            <div class="logo-title">
+                <img src="{{ url_for('static', filename='images/tecnun-logo.png') }}" alt="Tecnun Logo" class="logo">
+                <h1>Study Room Monitor</h1>
+            </div>
+
             {% if current_user.is_authenticated %}
             <div class="user-links">
                 <a href="{{ url_for('my_reservations') }}" class="user-link">My Reservations</a>

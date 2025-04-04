@@ -377,7 +377,7 @@ footer {
 
 /* Admin Dashboard Styles */
 .admin-table-container {
-    margin: 30px 0;
+    margin: 5px 0;
     overflow-x: auto;
 }
 
@@ -409,24 +409,38 @@ footer {
 }
 
 /* Add admin link to navigation */
+.header-container {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    position: relative;
+}
+
 .admin-link {
-    position: absolute;
-    right: 20px;
-    top: 20px;
+    margin-right: auto;
+    padding-left: 20px;
 }
 
-.admin-link a {
-    color: var(--tecnun-white);
-    background-color: var(--tecnun-red);
-    padding: 8px 15px;
-    border-radius: 4px;
-    text-decoration: none;
-    font-weight: 600;
-}
+    .admin-link a {
+        color: var(--tecnun-white);
+        background-color: var(--tecnun-red);
+        padding: 8px 15px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
 
-.admin-link a:hover {
-    background-color: #d32f2f;
-}
+        .admin-link a:hover {
+            background-color: #d32f2f;
+        }
+
+    /* If you want an icon */
+    .admin-link .fas {
+        font-size: 1.1em;
+    }
 /* Add to existing styles.css */
 .action-btn {
     padding: 5px 10px;
@@ -820,4 +834,159 @@ footer {
     margin-top: 50px;
     padding-top: 30px;
     border-top: 1px solid #eee;
+}
+
+/* ===== HEADER STYLES ===== */
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Admin link - left aligned */
+.admin-link {
+    order: 1;
+    margin-right: auto;
+}
+
+    .admin-link a {
+        display: inline-block;
+        padding: 8px 16px;
+        background-color: var(--tecnun-red);
+        color: white;
+        border-radius: 4px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: background-color 0.3s ease;
+    }
+
+        .admin-link a:hover {
+            background-color: #d32f2f;
+        }
+
+/* Logo and title - centered */
+.logo-title {
+    order: 2;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.logo {
+    height: 60px;
+    width: auto;
+}
+
+.logo-title h1 {
+    font-size: 1.8rem;
+    color: var(--tecnun-red);
+    margin: 0;
+}
+
+/* User links - right aligned */
+.user-links {
+    order: 3;
+    display: flex;
+    gap: 15px;
+    margin-left: auto;
+}
+
+.user-link {
+    padding: 8px 16px;
+    color: var(--tecnun-black);
+    text-decoration: none;
+    font-weight: 600;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+    .user-link:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+/* ===== MOBILE RESPONSIVENESS ===== */
+@media (max-width: 768px) {
+    .header-container {
+        flex-wrap: wrap;
+        padding: 15px;
+    }
+
+    .logo-title {
+        order: 1;
+        position: static;
+        transform: none;
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 15px;
+    }
+
+    .admin-link {
+        order: 2;
+        margin-right: 0;
+    }
+
+    .user-links {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        margin-top: 10px;
+    }
+
+    .logo {
+        height: 50px;
+    }
+
+    .logo-title h1 {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo-title {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .user-links {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .admin-link a,
+    .user-link {
+        padding: 6px 12px;
+        font-size: 0.9rem;
+    }
+}
+
+/* ===== EXISTING STYLES (keep these) ===== */
+:root {
+    --tecnun-red: #ff0404;
+    --tecnun-black: #000000;
+    --tecnun-white: #ffffff;
+    --tecnun-gray: #f5f5f5;
+    --tecnun-dark-gray: #333333;
+}
+
+body {
+    font-family: 'Open Sans', sans-serif;
+    color: var(--tecnun-black);
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+}
+
+.white-section {
+    background: white;
+    padding: 20px 0;
+    box-shadow: 0 2px 50px rgba(0,0,0,0.1);
 }
