@@ -5,6 +5,8 @@
     --tecnun-white: #ffffff;
     --tecnun-gray: #f5f5f5;
     --tecnun-dark-gray: #333333;
+    --tecnun-available-green: #4caf50;
+    --tecnun-occupied-red: #f44336;
 }
 
 * {
@@ -17,8 +19,145 @@ body {
     font-family: 'Open Sans', sans-serif;
     color: var(--tecnun-black);
     line-height: 1.6;
+    background-color: var(--tecnun-gray); /* Set body background to grey */
 }
 
+.header-wrapper {
+    background-color: var(--tecnun-white); /* Ensure the entire header background is white */
+    padding: 20px 0; /* Add vertical padding to the entire header area */
+}
+
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px; /* Keep horizontal padding for content within the header */
+}
+
+/* Admin link - left aligned */
+.admin-link {
+    order: 1;
+    margin-right: auto;
+}
+
+    .admin-link a {
+        display: inline-block;
+        padding: 8px 16px;
+        background-color: var(--tecnun-red);
+        color: white;
+        border-radius: 4px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: background-color 0.3s ease;
+    }
+
+        .admin-link a:hover {
+            background-color: #d32f2f;
+        }
+
+/* Logo and title - centered */
+.logo-title {
+    order: 2;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.logo {
+    height: 60px;
+    width: auto;
+}
+
+.logo-title h1 {
+    font-size: 1.8rem;
+    color: var(--tecnun-red);
+    margin: 0;
+}
+
+/* User links - right aligned */
+.user-links {
+    order: 3;
+    display: flex;
+    gap: 15px;
+    margin-left: auto;
+}
+
+.user-link {
+    padding: 8px 16px;
+    color: var(--tecnun-black);
+    text-decoration: none;
+    font-weight: 600;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+    .user-link:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+/* ===== MOBILE RESPONSIVENESS ===== */
+@media (max-width: 768px) {
+    .header-wrapper {
+        padding: 15px 0;
+    }
+
+    .header-container {
+        flex-wrap: wrap;
+        padding: 0 15px;
+    }
+
+    .logo-title {
+        order: 1;
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 15px;
+    }
+
+    .admin-link {
+        order: 2;
+        margin-right: 0;
+    }
+
+    .user-links {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        margin-top: 10px;
+    }
+
+    .logo {
+        height: 50px;
+    }
+
+    .logo-title h1 {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo-title {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .user-links {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .admin-link a,
+    .user-link {
+        padding: 6px 12px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Existing styles for other sections - these will now be on the grey background */
 .red-section {
     background-color: var(--tecnun-red);
     color: var(--tecnun-white);
@@ -52,45 +191,21 @@ body {
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
-.logo {
-    height: 70px;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
-    transition: all 0.3s ease;
-}
-
-    .logo:hover {
-        filter: drop-shadow(0 2px 6px rgba(0,0,0,0.2));
-        transform: scale(1.02);
-    }
-
 h1 {
     color: var(--tecnun-red);
     text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.header-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 30px;
-    position: relative; /* for pseudo-element */
-}
-
-    .header-container::after {
-        content: "";
-        position: absolute;
-        bottom: -20px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 100px;
-        height: 3px;
-        background: var(--tecnun-red);
-        border-radius: 3px;
-    }
-
-.logo {
-    height: 70px;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); /* soft shadow for depth */
+.header-container::after {
+    content: "";
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 3px;
+    background: var(--tecnun-red);
+    border-radius: 3px;
 }
 
 h1, h2, h3, h4 {
@@ -132,6 +247,8 @@ h3 {
     transition: transform 0.3s ease;
     cursor: pointer;
     border: 1px solid #eee;
+    display: flex; /* Enable flexbox for vertical alignment */
+    flex-direction: column; /* Stack content vertically */
 }
 
     .room-card:hover {
@@ -152,22 +269,23 @@ h3 {
     }
 
 .room-card h3 {
-    padding: 20px 20px 10px;
+    padding: 20px 20px 0; /* Adjust padding to make space for the button */
     color: var(--tecnun-black);
+    margin-bottom: 0; /* Remove default margin below heading */
 }
 
 .room-status {
-    padding: 0 20px;
+    padding: 10px 20px;
     font-weight: 600;
-    margin-bottom: 15px;
+    margin-bottom: 0; /* Remove default margin */
 }
 
     .room-status.available {
-        color: #2e7d32;
+        color: var(--tecnun-available-green);
     }
 
     .room-status.occupied {
-        color: #d32f2f;
+        color: var(--tecnun-occupied-red);
     }
 
 .sound-level {
@@ -251,25 +369,6 @@ footer {
     text-align: center;
     padding: 30px 0;
 }
-
-@media (max-width: 768px) {
-   .header-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 30px;
-    position: relative; /* for pseudo-element */
-}
-
-    h1 {
-        font-size: 2.2rem;
-    }
-
-    h2 {
-        font-size: 1.8rem;
-    }
-}
-
 
 /* Login Styles */
 .login-container {
@@ -388,59 +487,33 @@ footer {
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-.admin-table th, .admin-table td {
-    padding: 12px 15px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-}
+    .admin-table th, .admin-table td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
 
-.admin-table th {
-    background-color: var(--tecnun-red);
-    color: white;
-    font-weight: 600;
-}
+    .admin-table th {
+        background-color: var(--tecnun-red);
+        color: white;
+        font-weight: 600;
+    }
 
-.admin-table tr:nth-child(even) {
-    background-color: #f9f9f9;
-}
+    .admin-table tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
 
-.admin-table tr:hover {
-    background-color: #f1f1f1;
-}
+    .admin-table tr:hover {
+        background-color: #f1f1f1;
+    }
 
 /* Add admin link to navigation */
-.header-container {
-    display: flex;
-    align-items: center;
-    padding: 20px;
-    position: relative;
+
+
+/* If you want an icon */
+.admin-link .fas {
+    font-size: 1.1em;
 }
-
-.admin-link {
-    margin-right: auto;
-    padding-left: 20px;
-}
-
-    .admin-link a {
-        color: var(--tecnun-white);
-        background-color: var(--tecnun-red);
-        padding: 8px 15px;
-        border-radius: 4px;
-        text-decoration: none;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-        .admin-link a:hover {
-            background-color: #d32f2f;
-        }
-
-    /* If you want an icon */
-    .admin-link .fas {
-        font-size: 1.1em;
-    }
 /* Add to existing styles.css */
 .action-btn {
     padding: 5px 10px;
@@ -485,508 +558,4 @@ footer {
 /* Añadir a styles.css */
 .time-slots {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 10px;
-    margin-top: 10px;
-}
-
-.time-slot {
-    border: 1px solid #ddd;
-    padding: 10px;
-    border-radius: 4px;
-    text-align: center;
-}
-
-    .time-slot input[type="radio"] {
-        display: none;
-    }
-
-        .time-slot input[type="radio"]:checked + label {
-            font-weight: bold;
-            color: var(--tecnun-red);
-        }
-
-.reserve-button {
-    padding: 0 20px 20px;
-}
-
-    .reserve-button .btn {
-        display: block;
-        background-color: var(--tecnun-red);
-        color: white;
-        text-align: center;
-        padding: 8px;
-        border-radius: 4px;
-        text-decoration: none;
-        font-weight: 600;
-    }
-
-        .reserve-button .btn:hover {
-            background-color: #d32f2f;
-        }
-
-/* Estilos para la página de reservas */
-.my-reservations {
-    margin: 30px 0;
-}
-
-.reservation-card {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 15px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-    .reservation-card h3 {
-        margin-top: 0;
-        color: var(--tecnun-red);
-    }
-
-.reservation-meta {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 10px;
-}
-/* Estilos para el sistema de reservas */
-.user-links {
-    position: absolute;
-    right: 20px;
-    top: 20px;
-    display: flex;
-    gap: 15px;
-}
-
-.user-link {
-    color: var(--tecnun-black);
-    text-decoration: none;
-    font-weight: 600;
-    padding: 8px 12px;
-    border-radius: 4px;
-    transition: all 0.3s;
-}
-
-    .user-link:hover {
-        background-color: rgba(0,0,0,0.1);
-    }
-
-.room-capacity {
-    padding: 0 20px;
-    margin: 10px 0;
-    font-size: 0.9rem;
-    color: var(--tecnun-dark-gray);
-}
-
-.reserve-actions {
-    padding: 0 20px 20px;
-    display: flex;
-    gap: 10px;
-}
-
-.reserve-btn, .details-btn {
-    flex: 1;
-    padding: 8px;
-    border: none;
-    border-radius: 4px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.reserve-btn {
-    background-color: var(--tecnun-red);
-    color: white;
-}
-
-.details-btn {
-    background-color: var(--tecnun-dark-gray);
-    color: white;
-}
-
-.reserve-btn:hover {
-    background-color: #d32f2f;
-}
-
-.details-btn:hover {
-    background-color: #555;
-}
-
-.time-slots {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 10px;
-    margin-top: 15px;
-}
-
-.time-slot {
-    background-color: rgba(255,255,255,0.1);
-    padding: 10px;
-    border-radius: 4px;
-    text-align: center;
-    border: 1px solid #444;
-}
-
-/* Modal */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.7);
-}
-
-.modal-content {
-    background-color: var(--tecnun-white);
-    margin: 10% auto;
-    padding: 30px;
-    border-radius: 8px;
-    width: 80%;
-    max-width: 600px;
-    position: relative;
-}
-
-.close-btn {
-    position: absolute;
-    right: 20px;
-    top: 20px;
-    font-size: 1.5rem;
-    cursor: pointer;
-}
-
-
-/* Estilos para el sistema de reservas */
-.reservation-form {
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-.time-slots-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
-    margin-top: 15px;
-}
-
-.time-slot-option input[type="radio"] {
-    display: none;
-}
-
-.time-slot-option label {
-    display: block;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.time-slot-option input[type="radio"]:checked + label {
-    background-color: var(--tecnun-red);
-    color: white;
-    border-color: var(--tecnun-red);
-}
-
-.no-slots {
-    padding: 15px;
-    background-color: #f5f5f5;
-    border-radius: 4px;
-    text-align: center;
-}
-
-.form-actions {
-    display: flex;
-    gap: 15px;
-    margin-top: 30px;
-}
-
-.submit-btn, .cancel-btn {
-    padding: 12px 20px;
-    border: none;
-    border-radius: 4px;
-    font-weight: 600;
-    cursor: pointer;
-    flex: 1;
-    text-align: center;
-    text-decoration: none;
-}
-
-.submit-btn {
-    background-color: var(--tecnun-red);
-    color: white;
-}
-
-.cancel-btn {
-    background-color: var(--tecnun-dark-gray);
-    color: white;
-}
-
-/* Estilos para la lista de reservas */
-.reservations-list {
-    margin-top: 30px;
-}
-
-.reservation-card {
-    border: 1px solid #eee;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 15px;
-    transition: all 0.3s;
-}
-
-    .reservation-card.active {
-        border-left: 4px solid var(--tecnun-red);
-    }
-
-    .reservation-card.past {
-        opacity: 0.7;
-        background-color: #f9f9f9;
-    }
-
-.reservation-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.reservation-date {
-    color: var(--tecnun-dark-gray);
-    font-size: 0.9rem;
-}
-
-.reservation-time {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 15px;
-}
-
-.reservation-actions {
-    text-align: right;
-}
-
-.no-reservations {
-    text-align: center;
-    padding: 40px 0;
-}
-
-    .no-reservations .btn {
-        display: inline-block;
-        margin-top: 20px;
-        padding: 10px 20px;
-        background-color: var(--tecnun-red);
-        color: white;
-        text-decoration: none;
-        border-radius: 4px;
-    }
-
-/* Estilos para el panel de administración */
-.admin-actions {
-    margin-bottom: 30px;
-}
-
-.add-btn {
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: var(--tecnun-red);
-    color: white;
-    text-decoration: none;
-    border-radius: 4px;
-    font-weight: 600;
-}
-
-.status-badge {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-
-    .status-badge.available {
-        background-color: #e8f5e9;
-        color: #2e7d32;
-    }
-
-    .status-badge.occupied {
-        background-color: #ffebee;
-        color: #d32f2f;
-    }
-
-/* Estilos para formularios de aulas */
-.classroom-form {
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-    .classroom-form textarea {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-family: 'Open Sans', sans-serif;
-    }
-
-.classroom-stats {
-    margin-top: 50px;
-    padding-top: 30px;
-    border-top: 1px solid #eee;
-}
-
-/* ===== HEADER STYLES ===== */
-.header-container {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    position: relative;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-}
-
-/* Admin link - left aligned */
-.admin-link {
-    order: 1;
-    margin-right: auto;
-}
-
-    .admin-link a {
-        display: inline-block;
-        padding: 8px 16px;
-        background-color: var(--tecnun-red);
-        color: white;
-        border-radius: 4px;
-        font-weight: 600;
-        text-decoration: none;
-        transition: background-color 0.3s ease;
-    }
-
-        .admin-link a:hover {
-            background-color: #d32f2f;
-        }
-
-/* Logo and title - centered */
-.logo-title {
-    order: 2;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.logo {
-    height: 60px;
-    width: auto;
-}
-
-.logo-title h1 {
-    font-size: 1.8rem;
-    color: var(--tecnun-red);
-    margin: 0;
-}
-
-/* User links - right aligned */
-.user-links {
-    order: 3;
-    display: flex;
-    gap: 15px;
-    margin-left: auto;
-}
-
-.user-link {
-    padding: 8px 16px;
-    color: var(--tecnun-black);
-    text-decoration: none;
-    font-weight: 600;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-}
-
-    .user-link:hover {
-        background-color: rgba(0, 0, 0, 0.05);
-    }
-
-/* ===== MOBILE RESPONSIVENESS ===== */
-@media (max-width: 768px) {
-    .header-container {
-        flex-wrap: wrap;
-        padding: 15px;
-    }
-
-    .logo-title {
-        order: 1;
-        position: static;
-        transform: none;
-        width: 100%;
-        justify-content: center;
-        margin-bottom: 15px;
-    }
-
-    .admin-link {
-        order: 2;
-        margin-right: 0;
-    }
-
-    .user-links {
-        order: 3;
-        width: 100%;
-        justify-content: center;
-        margin-top: 10px;
-    }
-
-    .logo {
-        height: 50px;
-    }
-
-    .logo-title h1 {
-        font-size: 1.5rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .logo-title {
-        flex-direction: column;
-        gap: 5px;
-    }
-
-    .user-links {
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .admin-link a,
-    .user-link {
-        padding: 6px 12px;
-        font-size: 0.9rem;
-    }
-}
-
-/* ===== EXISTING STYLES (keep these) ===== */
-:root {
-    --tecnun-red: #ff0404;
-    --tecnun-black: #000000;
-    --tecnun-white: #ffffff;
-    --tecnun-gray: #f5f5f5;
-    --tecnun-dark-gray: #333333;
-}
-
-body {
-    font-family: 'Open Sans', sans-serif;
-    color: var(--tecnun-black);
-    line-height: 1.6;
-    margin: 0;
-    padding: 0;
-}
-
-.white-section {
-    background: white;
-    padding: 20px 0;
-    box-shadow: 0 2px 50px rgba(0,0,0,0.1);
-}
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1
