@@ -6,6 +6,37 @@
     <title>Study Room Monitor - Tecnun</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        .reserve-button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px; /* Add some space above the button */
+            width: 100%; /* Make the button fill the width of the card */
+            box-sizing: border-box; /* Include padding and border in the element's total width and height */
+        }
+
+        .reserve-button.available {
+            background-color: var(--tecnun-available-green);
+            color: var(--tecnun-white);
+        }
+
+        .reserve-button.available:hover {
+            background-color: #45a049;
+        }
+
+        .reserve-button.occupied {
+            background-color: var(--tecnun-occupied-red);
+            color: var(--tecnun-white);
+        }
+
+        .reserve-button.occupied:hover {
+            background-color: #d32f2f;
+        }
+    </style>
 </head>
 <body>
     <header class="white-section">
@@ -44,16 +75,12 @@
                         <div class="room-status {% if classroom.is_occupied %}occupied{% else %}available{% endif %}">
                             {% if classroom.is_occupied %}Occupied{% else %}Available{% endif %}
                         </div>
+                        <button class="reserve-button {% if classroom.is_occupied %}occupied{% else %}available{% endif %}">
+                            {% if classroom.is_occupied %}Occupied{% else %}Reserve{% endif %}
+                        </button>
                         <div class="sound-level">
                             <div class="level-bar" style="width: {{ classroom.noise_level }}%"></div>
                             <span>{{ classroom.noise_level }} dB</span>
-                        </div>
-                        <div class="room-capacity">
-                            Capacity: {{ classroom.capacity }} people
-                        </div>
-                        <div class="reserve-actions">
-                            <a href="{{ url_for('reserve', classroom_id=classroom.id) }}" class="reserve-btn">Reserve</a>
-                            <button class="details-btn" onclick="showRoomDetails('{{ classroom.name }}', {{ classroom.id }})">Details</button>
                         </div>
                     </div>
                     {% endfor %}
@@ -97,14 +124,12 @@
         </div>
     </footer>
 
-    <!-- Modal para reservas -->
     <div id="reservationModal" class="modal">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
             <h3 id="modalRoomName"></h3>
             <div class="time-slots-container" id="timeSlots">
-                <!-- Las franjas horarias se cargarán aquí -->
-            </div>
+                </div>
         </div>
     </div>
 
@@ -174,13 +199,21 @@
                     document.getElementById('avgSoundLevel').textContent = data.avg_sound_level + ' dB';
                     document.getElementById('peakHours').textContent = data.peak_hours;
 
-                    // Actualizar estado de las salas (si es necesario)
+                    // Actualizar estado de las salas y botones
                     data.rooms.forEach(room => {
                         const roomElement = document.querySelector(`.room-card h3:contains("${room.name}")`)?.parentElement;
                         if (roomElement) {
                             const statusElement = roomElement.querySelector('.room-status');
+                            const reserveButton = roomElement.querySelector('.reserve-button');
+
+                            // Update status text and class
                             statusElement.className = `room-status ${room.is_occupied ? 'occupied' : 'available'}`;
                             statusElement.textContent = room.is_occupied ? 'Occupied' : 'Available';
+
+                            // Update button text and class
+                            reserveButton.className = `reserve-button ${room.is_occupied ? 'occupied' : 'available'}`;
+                            reserveButton.textContent = room.is_occupied ? 'Occupied' : 'Reserve';
+
 
                             const soundElement = roomElement.querySelector('.sound-level .level-bar');
                             soundElement.style.width = `${room.noise_level}%`;
