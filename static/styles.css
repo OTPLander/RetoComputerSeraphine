@@ -558,4 +558,93 @@ footer {
 /* Añadir a styles.css */
 .time-slots {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+/* Modal styles */
+.modal {
+    display: none; /* Hidden by default - keep this one */
+    position: fixed; /* Stay in place */
+    z-index: 10; /* Increased z-index to ensure it's on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.6); /* Black w/ more opacity */
+    padding-top: 60px;
+    /* REMOVE THIS LINE: display: flex; */
+    align-items: center; /* Center vertically */
+    justify-content: center; /* Center horizontally */
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: auto; /* Remove top margin, center with flexbox */
+    padding: 30px; /* Increased padding */
+    border: 1px solid #888;
+    border-radius: 10px; /* More rounded corners */
+    width: 90%; /* Could be more responsive */
+    max-width: 500px;
+    position: relative;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3); /* Add shadow for better appearance */
+}
+
+.close-btn {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute; /* Position absolute within the modal-content */
+    top: 10px;
+    right: 15px;
+}
+
+    .close-btn:hover,
+    .close-btn:focus {
+        color: #000;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+.time-slots-container {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); /* Responsive grid */
+    gap: 10px;
+}
+
+.time-slot {
+    background-color: var(--tecnun-available-green);
+    color: var(--tecnun-white);
+    padding: 10px;
+    border-radius: 4px;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+    .time-slot:hover {
+        background-color: #45a049;
+    }
+
+#reservationDate {
+    margin-bottom: 15px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+    width: 100%; /* Make date input full width */
+    box-sizing: border-box; /* Include padding in width */
+}
+
+/* Optional: Style for the room card to indicate it's clickable */
+.room-card {
+    cursor: pointer;
+}
+
+/* Remove or modify the old reserve-button styles if they are no longer needed */
+.reserve-button {
+    display: none; /* Hide the old button */
+}
