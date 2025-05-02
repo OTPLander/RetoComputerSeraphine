@@ -15,6 +15,9 @@ import paho.mqtt.client as mqtt
 import json
 import struct
 
+
+
+
 def run_mqtt_client():
     brokerMioty = "192.168.10.153"
     portMioty = 1883
@@ -39,6 +42,18 @@ def run_mqtt_client():
             print(f"🎧 Ruido: {noise}")
             print(f"🌡️ Temperatura: {temperature / 100:.2f}°C")
             print(f"💡 Luminosidad: {luminosity}")
+
+            with app.app_context(): # Crea un contexto de aplicación para operaciones de DB
+                new_mioty_data = MiotyData(
+                    key_code=key,
+                    noise=noise,
+                    temperature=temperature, # Guarda el valor ya convertido a float
+                    luminosity=luminosity,
+                    timestamp=datetime.utcnow() # Guarda el timestamp actual
+                )
+                db.session.add(new_mioty_data) # Añade el nuevo objeto a la sesión
+                db.session.commit() # Guarda los cambios en la base de datos
+                print("✅ Datos MQTT guardados en la base de datos.")
 
         except Exception as e:
             print("❌ Error procesando mensaje MQTT:", e)
@@ -86,6 +101,17 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 # ========== MODELS ==========
+class MiotyData(db.Model):
+    __tablename__ = 'mioty_data' # Asegúrate de que coincida con el nombre de la tabla
+    id = db.Column(db.Integer, primary_key=True)
+    key_code = db.Column(db.Integer, nullable=False) # Almacenar el valor entero de la tecla
+    noise = db.Column(db.Integer, nullable=False)
+    temperature = db.Column(db.Float, nullable=False) # Usar Float para la temperatura decimal
+    luminosity = db.Column(db.Integer, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow) # Para saber cuándo se recibió el dato
+
+    def __repr__(self):
+        return f'<MiotyData {self.timestamp}>'
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -574,18 +600,39 @@ def cancel_reservation(reservation_id):
 # ========== ADMIN ROUTES ==========
 
 @app.route('/admin/dashboard')
-@login_required
-@admin_required
+@login_required # Asumiendo que necesitas estar logueado
+@admin_required # Asumiendo que solo los administradores pueden acceder
 def admin_dashboard():
+    """Renderiza el panel de administración con datos de usuarios, aulas, reservas y mensajes Mioty."""
+    # Obtiene todos los usuarios de la base de datos
     users = User.query.all()
-    classrooms = Classroom.query.all()
-    # Fetch all reservations and eagerly load user and classroom relationships
-    # Eager loading helps avoid N+1 queries in the template
-    reservations = Reservation.query.options(db.joinedload(Reservation.user), db.joinedload(Reservation.classroom)).order_by(Reservation.start_time.desc()).all()
-   
 
-    # Pass reservations to the template
-    return render_template('admin_dashboard.html', users=users, classrooms=classrooms, reservations=reservations, datetime=datetime)
+    # Obtiene todas las aulas de la base de datos
+    classrooms = Classroom.query.all()
+
+    # Obtiene todas las reservas, cargando eagermente las relaciones de usuario y aula
+    # para evitar consultas adicionales en el template, ordenado por fecha descendente
+    reservations = Reservation.query.options(
+        db.joinedload(Reservation.user),
+        db.joinedload(Reservation.classroom)
+    ).order_by(Reservation.start_time.desc()).all()
+
+    # *** CORRECCIÓN: Obtiene todos los mensajes de la tabla mioty_data ***
+    # Usa el modelo MiotyData para consultar la tabla 'mioty_data'
+    # Ordena los mensajes por timestamp de forma descendente para ver los más recientes primero
+    mioty_messages_list = MiotyData.query.order_by(MiotyData.timestamp.desc()).all()
+
+
+    # Renderiza la plantilla HTML del panel de administración
+    # Pasa los datos obtenidos de las consultas a la plantilla
+    return render_template(
+        'admin_dashboard.html',
+        users=users,         # Lista de objetos User
+        classrooms=classrooms, # Lista de objetos Classroom
+        reservations=reservations, # Lista de objetos Reservation con user y classroom cargados
+        messages=mioty_messages_list, # <-- Lista de objetos MiotyData (los mensajes)
+        datetime=datetime    # Pasa el objeto datetime (opcional si no lo usas mucho en el template)
+    )
 
 @app.route('/admin/users')
 @login_required
@@ -618,7 +665,7 @@ def edit_user(user_id):
             flash('User updated successfully', 'success')
             return redirect(url_for('manage_users'))
 
-    return render_template('admin_edit_user.html', user=user, datetime=datetime)
+    return render_template('edit_user.html', user=user, datetime=datetime)
 
 
 @app.route('/admin/users/delete/<int:user_id>', methods=['POST'])
