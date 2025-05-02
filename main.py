@@ -6,6 +6,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import secrets
+import random # Import random for code generation
 import smtplib
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
@@ -62,6 +63,8 @@ class User(UserMixin, db.Model):
     reset_token_expires = db.Column(db.DateTime, nullable=True)
 
     reservations = db.relationship('Reservation', backref='user', lazy=True)
+    # Add relationship to ReservationCodes. Creates 'user_rel' on ReservationCodes
+    reservation_codes = db.relationship('ReservationCodes', backref='user_rel', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -79,6 +82,9 @@ class Classroom(db.Model):
     description = db.Column(db.Text)
 
     reservations = db.relationship('Reservation', backref='classroom', lazy=True)
+    # Add relationship to ReservationCodes. Creates 'classroom_rel' on ReservationCodes
+    reservation_codes = db.relationship('ReservationCodes', backref='classroom_rel', lazy=True)
+
 
     def is_occupied(self):
         now = datetime.now()
@@ -111,6 +117,7 @@ class Classroom(db.Model):
         ).count()
         return round((reserved_slots / total_slots) * 100) if total_slots > 0 else 0
 
+
 class Reservation(db.Model):
     __tablename__ = 'reservations'
 
@@ -121,17 +128,38 @@ class Reservation(db.Model):
     end_time = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Add this new property
+
     @property
     def is_active(self):
         """Checks if the reservation's end time is in the future or present."""
         return self.end_time >= datetime.now()
 
-    # reservations = db.relationship('Reservation', backref='user', lazy=True) # This line might exist already
-    # user = db.relationship('User', backref='reservations') # This line might exist already
-    # classroom = db.relationship('Classroom', backref='reservations') # This line might exist already
+    # ADDED: Explicit relationship to AccessCode. Creates 'access_code_rel' on Reservation
+    access_code_rel = db.relationship(
+        'ReservationCodes',
+        backref='reservation', # This creates a 'reservation' attribute on ReservationCodes instances
+        uselist=False,         # One Reservation has one AccessCode
+        lazy=True              # Default loading, can be overridden by joinedload
+    )
 
-# ... rest of your main.py
+
+class ReservationCodes(db.Model):
+    __tablename__ = 'acces_codes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(2), nullable=False) # The code itself (e.g., "05", "99")
+
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    reservation_id = db.Column(db.Integer, db.ForeignKey('reservations.id'), unique=True, nullable=False) # Link back to Reservation
+    classroom_id = db.Column(db.Integer, db.ForeignKey('classrooms.id'), nullable=False) # Keep this as discussed
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # REMOVED: Explicit relationship definitions for user_rel and classroom_rel
+    # These attributes are created automatically by the backref arguments
+    # in the relationships defined on the User and Classroom models.
+    # user_rel = db.relationship('User')         # REMOVED
+    # classroom_rel = db.relationship('Classroom') # REMOVED
+
 
 # ========== HELPER FUNCTIONS ==========
 
@@ -159,8 +187,10 @@ def send_email(to, subject, body):
         app.logger.error(f"Email sending failed: {str(e)}")
         return False
 
-def send_reservation_confirmation(user, classroom, reservation):
+# MODIFIED: Accept access_code as an argument
+def send_reservation_confirmation(user, classroom, reservation, access_code):
     subject = f"Reservation Confirmation for {classroom.name}"
+    # MODIFIED: Include the access code in the email body
     body = f"""
 Dear {user.username},
 
@@ -169,6 +199,10 @@ Your reservation has been confirmed:
 Room: {classroom.name}
 Date: {reservation.start_time.strftime('%A, %d %B %Y')}
 Time: {reservation.start_time.strftime('%H:%M')} - {reservation.end_time.strftime('%H:%M')}
+
+Your access code for this reservation is: {access_code}
+
+Please use this code to access the room during your reserved time.
 
 Thank you for using the Study Room Monitor system.
 """
@@ -278,6 +312,7 @@ def forgot_password():
         if user:
             token = secrets.token_urlsafe(32)
             user.reset_token = token
+            # Corrected typo in app.config key name
             user.reset_token_expires = datetime.utcnow() + timedelta(hours=app.config['RESET_TOKEN_EXPIRE_HOURS'])
             db.session.commit()
 
@@ -326,6 +361,7 @@ def reset_password(token):
 @login_required
 def index():
     classrooms = Classroom.query.all()
+    # Pass datetime to the template for the date picker min attribute
     return render_template('index.html', classrooms=classrooms, datetime=datetime)
 
 # --- MODIFIED RESERVE ROUTE FOR AJAX ---
@@ -342,30 +378,37 @@ def reserve(classroom_id):
             selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
             selected_date = datetime.today().date()
-            # Flash messages won't typically appear for AJAX POST responses,
-            # but kept here for the GET case.
             flash('Invalid date format', 'warning')
 
-        # Get available slots for selected date for rendering the template
-        reserved_slots = [
-            r.start_time.strftime('%H:%M')
-            for r in classroom.reservations
-            if r.start_time.date() == selected_date
-        ]
-        available_slots = [
-            slot for slot in TIME_SLOTS
-            if slot['start'] not in reserved_slots
+        # Query reservations specifically for the selected date and classroom
+        reservations_for_date = Reservation.query.filter(
+            db.func.date(Reservation.start_time) == selected_date,
+            Reservation.classroom_id == classroom_id
+        ).all()
+
+
+        reserved_starts = [
+            r.start_time.strftime('%H:%M') for r in reservations_for_date
         ]
 
-        # You might need a dedicated 'reserve.html' template,
-        # or ensure index.html can handle displaying the correct info
-        # if accessed directly via this GET route.
+        now = datetime.now()
+        available_slots = []
+        for slot in TIME_SLOTS:
+            if slot['start'] not in reserved_starts:
+                slot_end_datetime = datetime.strptime(f"{date_str} {slot['end']}", '%Y-%m-%d %H:%M')
+
+                if selected_date == now.date() and slot_end_datetime < now:
+                    continue # Skip slots in the past for today
+                else:
+                    available_slots.append(slot)
+
         return render_template(
             'reserve.html', # Adjust template name if necessary
             classroom=classroom,
             available_slots=available_slots,
             selected_date=selected_date.strftime('%Y-%m-%d'),
-            today=datetime.today().strftime('%Y-%m-%d')
+            today=datetime.today().strftime('%Y-%m-%d'),
+            datetime=datetime # Pass datetime for potential use in template
         )
 
     # Handle the POST request (from the AJAX call in the modal)
@@ -373,80 +416,82 @@ def reserve(classroom_id):
         date_str = request.form.get('date')
         time_slot_label = request.form.get('time_slot')
 
-        # Basic validation for required data
         if not date_str or not time_slot_label:
-            # Return JSON error response with status code
-            return jsonify({'status': 'error', 'message': 'Missing date or time slot'}), 400 # Bad Request
+            return jsonify({'status': 'error', 'message': 'Missing date or time slot'}), 400
 
         try:
-            # Find the corresponding time slot configuration
             slot = next((s for s in TIME_SLOTS if s['label'] == time_slot_label), None)
 
             if not slot:
-                # Return JSON error if the provided time slot label is not found
-                return jsonify({'status': 'error', 'message': 'Invalid time slot selected'}), 400 # Bad Request
+                return jsonify({'status': 'error', 'message': 'Invalid time slot selected'}), 400
 
-            # Construct datetime objects for the reservation start and end times
+            # Corrected datetime parsing format
             start_time = datetime.strptime(f"{date_str} {slot['start']}", '%Y-%m-%d %H:%M')
             end_time = datetime.strptime(f"{date_str} {slot['end']}", '%Y-%m-%d %H:%M')
 
-            # Ensure reservation is not in the past
+
             if start_time < datetime.now():
                  return jsonify({'status': 'error', 'message': 'Cannot reserve past time slots'}), 400
 
-            # Check if the time slot is already reserved for this classroom
             existing = Reservation.query.filter(
                 Reservation.classroom_id == classroom_id,
                 Reservation.start_time == start_time
             ).first()
 
             if existing:
-                # Return JSON error if the slot is already taken (Conflict)
-                return jsonify({'status': 'error', 'message': 'This time slot is already reserved'}), 409 # Conflict
+                return jsonify({'status': 'error', 'message': 'This time slot is already reserved'}), 409
             else:
-                # Create a new reservation object
+                # Create the reservation first
                 reservation = Reservation(
                     user_id=current_user.id,
                     classroom_id=classroom_id,
                     start_time=start_time,
                     end_time=end_time
                 )
-                db.session.add(reservation) # Add to the database session
-                db.session.commit()        # Commit the transaction
+                db.session.add(reservation)
+                db.session.commit() # Commit the reservation to get its ID
 
-                # Send the reservation confirmation email
-                send_reservation_confirmation(current_user, classroom, reservation)
+                # --- NEW: Generate and Store Access Code using ReservationCodes model ---
+                # Generate a random two-digit code (00 to 99)
+                access_code_value = f"{random.randint(0, 99):02d}"
 
-                # Return JSON success response
-                return jsonify({'status': 'success', 'message': 'Reservation successful!'})
+                # Create a new ReservationCodes record based on the model with user_id and reservation_id
+                reservation_code = ReservationCodes( # Use the class name ReservationCodes
+                    code=access_code_value,
+                    user_id=current_user.id,       # Link to the user making the reservation
+                    reservation_id=reservation.id,  # Link to the specific reservation
+                    classroom_id=classroom_id, # Linked to classroom
+                    created_at=datetime.utcnow() # Added created_at timestamp
+                )
+                db.session.add(reservation_code) # Add the reservation code to the session
+                db.session.commit()        # Commit the reservation code record
+
+                # --- MODIFIED: Call send_reservation_confirmation with the code ---
+                send_reservation_confirmation(current_user, classroom, reservation, access_code_value)
+
+                return jsonify({'status': 'success', 'message': 'Reservation successful! Your access code has been sent via email.'})
 
         except Exception as e:
-            # Log the error for debugging
             app.logger.error(f"Reservation processing error: {str(e)}")
-            # Return a generic JSON error response for unexpected issues
-            return jsonify({'status': 'error', 'message': 'An internal error occurred during reservation.'}), 500 # Internal Server Error
+            db.session.rollback() # Rollback changes if an error occurred after any commit
+            return jsonify({'status': 'error', 'message': 'An internal error occurred during reservation.'}), 500
 
-    # Return Method Not Allowed for any other HTTP methods
-    return jsonify({'status': 'error', 'message': 'Method not allowed'}), 405 # Method Not Allowed
+    return jsonify({'status': 'error', 'message': 'Method not allowed'}), 405
 
 
 @app.route('/my-reservations')
 @login_required
 def my_reservations():
-    # Upcoming reservations
-    upcoming = Reservation.query.filter(
+    # Upcoming reservations only
+    # Fetch reservations and eagerly load the associated access code to avoid N+1 queries
+    # Ensure the relationship name 'access_code_rel' matches the one defined in the Reservation model
+    upcoming = Reservation.query.options(db.joinedload(Reservation.access_code_rel)).filter(
         Reservation.user_id == current_user.id,
         Reservation.end_time >= datetime.now()
     ).order_by(Reservation.start_time.asc()).all()
 
-    # Past reservations (last 30 days)
-    past = Reservation.query.filter(
-        Reservation.user_id == current_user.id,
-        Reservation.end_time < datetime.now(),
-        Reservation.start_time > datetime.now() - timedelta(days=30)
-    ).order_by(Reservation.start_time.desc()).all()
-
-    return render_template('my_reservations.html', reservations=upcoming + past)
+    # Pass datetime to the template for potential use (like copyright year)
+    return render_template('my_reservations.html', reservations=upcoming, datetime=datetime)
 
 @app.route('/cancel-reservation/<int:reservation_id>', methods=['POST'])
 @login_required
@@ -461,9 +506,29 @@ def cancel_reservation(reservation_id):
     if reservation.end_time < datetime.now():
         flash("Cannot cancel past reservations", "warning")
     else:
-        db.session.delete(reservation)
-        db.session.commit()
-        flash("Reservation canceled", "success")
+        try:
+            # Delete the associated access code directly by query without loading the object.
+            # This might bypass the error caused by the missing 'classroom_id' column in the old table schema.
+            # Filter by reservation_id, which is in ReservationCodes
+            deleted_count = ReservationCodes.query.filter_by(reservation_id=reservation.id).delete()
+
+            # Now delete the reservation itself
+            db.session.delete(reservation)
+
+            # Commit both deletions in one transaction
+            db.session.commit()
+
+            if deleted_count > 0:
+                 app.logger.info(f"Deleted {deleted_count} access code(s) for reservation ID {reservation.id}")
+
+            flash("Reservation canceled", "success")
+
+        except Exception as e:
+            # If an error occurs during deletion (including the 'no such column' error
+            # if the workaround wasn't successful for some reason), rollback the changes.
+            db.session.rollback()
+            app.logger.error(f"Error canceling reservation or deleting code: {str(e)}")
+            flash("Error canceling reservation", "danger")
 
     return redirect(url_for('my_reservations'))
 
@@ -475,14 +540,20 @@ def cancel_reservation(reservation_id):
 def admin_dashboard():
     users = User.query.all()
     classrooms = Classroom.query.all()
-    return render_template('admin_dashboard.html', users=users, classrooms=classrooms)
+    # Fetch all reservations and eagerly load user and classroom relationships
+    # Eager loading helps avoid N+1 queries in the template
+    reservations = Reservation.query.options(db.joinedload(Reservation.user), db.joinedload(Reservation.classroom)).order_by(Reservation.start_time.desc()).all()
+
+    # Pass reservations to the template
+    return render_template('admin_dashboard.html', users=users, classrooms=classrooms, reservations=reservations, datetime=datetime)
 
 @app.route('/admin/users')
 @login_required
 @admin_required
 def manage_users():
     users = User.query.order_by(User.username).all()
-    return render_template('admin_users.html', users=users)
+    return render_template('admin_users.html', users=users, datetime=datetime)
+
 
 @app.route('/admin/users/edit/<int:user_id>', methods=['GET', 'POST'])
 @login_required
@@ -493,10 +564,8 @@ def edit_user(user_id):
     if request.method == 'POST':
         username = request.form['username']
         email = request.form['email']
-        # Use request.form.get to safely check checkbox presence
         is_admin = request.form.get('is_admin') == 'on'
 
-        # Check for conflicts
         if User.query.filter(User.username == username, User.id != user.id).first():
             flash('Username already taken', 'danger')
         elif User.query.filter(User.email == email, User.id != user.id).first():
@@ -509,21 +578,32 @@ def edit_user(user_id):
             flash('User updated successfully', 'success')
             return redirect(url_for('manage_users'))
 
-    return render_template('admin_edit_user.html', user=user)
+    return render_template('admin_edit_user.html', user=user, datetime=datetime)
+
 
 @app.route('/admin/users/delete/<int:user_id>', methods=['POST'])
 @login_required
 @admin_required
 def delete_user(user_id):
-    # Prevent admin from deleting their own account
     if current_user.id == user_id:
         flash('Cannot delete your own account', 'danger')
         return redirect(url_for('manage_users'))
 
     user = User.query.get_or_404(user_id)
-    db.session.delete(user)
-    db.session.commit()
-    flash('User deleted successfully', 'success')
+    try:
+        # Delete associated access codes and reservations before deleting the user
+        # Filter by user_id in ReservationCodes
+        ReservationCodes.query.filter_by(user_id=user.id).delete()
+        Reservation.query.filter_by(user_id=user.id).delete()
+        db.session.delete(user)
+        db.session.commit()
+        flash('User and associated data deleted successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error deleting user {user_id}: {str(e)}")
+        flash('Error deleting user', 'danger')
+
+
     return redirect(url_for('manage_users'))
 
 @app.route('/admin/classrooms')
@@ -531,7 +611,7 @@ def delete_user(user_id):
 @admin_required
 def manage_classrooms():
     classrooms = Classroom.query.order_by(Classroom.name).all()
-    return render_template('admin_classrooms.html', classrooms=classrooms)
+    return render_template('admin_classrooms.html', classrooms=classrooms, datetime=datetime)
 
 @app.route('/admin/classrooms/add', methods=['GET', 'POST'])
 @login_required
@@ -539,19 +619,18 @@ def manage_classrooms():
 def add_classroom():
     if request.method == 'POST':
         name = request.form['name']
-        # Use a try-except block for type conversion
         try:
             capacity = int(request.form['capacity'])
         except ValueError:
             flash('Capacity must be an integer', 'danger')
-            return render_template('admin_add_classroom.html', form_data=request.form) # Preserve form data
+            return render_template('admin_add_classroom.html', form_data=request.form, datetime=datetime)
 
         color = request.form.get('color', '#ff0404')
         description = request.form.get('description', '')
 
         if Classroom.query.filter_by(name=name).first():
             flash('Classroom name already exists', 'danger')
-            return render_template('admin_add_classroom.html', form_data=request.form)
+            return render_template('admin_add_classroom.html', form_data=request.form, datetime=datetime)
 
         classroom = Classroom(
             name=name,
@@ -564,7 +643,7 @@ def add_classroom():
         flash('Classroom added successfully', 'success')
         return redirect(url_for('manage_classrooms'))
 
-    return render_template('admin_add_classroom.html')
+    return render_template('admin_add_classroom.html', datetime=datetime)
 
 @app.route('/admin/classrooms/edit/<int:classroom_id>', methods=['GET', 'POST'])
 @login_required
@@ -574,27 +653,25 @@ def edit_classroom(classroom_id):
 
     if request.method == 'POST':
         classroom.name = request.form['name']
-        # Use try-except for capacity conversion
         try:
             classroom.capacity = int(request.form['capacity'])
         except ValueError:
             flash('Capacity must be an integer', 'danger')
-            return render_template('admin_edit_classroom.html', classroom=classroom) # Render with existing data
+            return render_template('admin_edit_classroom.html', classroom=classroom, datetime=datetime)
 
         classroom.color = request.form.get('color', classroom.color)
         classroom.description = request.form.get('description', classroom.description)
 
-        # Optional: Check for name conflict if name is changed
         existing = Classroom.query.filter(Classroom.name == classroom.name, Classroom.id != classroom_id).first()
         if existing:
              flash('Classroom name already exists', 'danger')
-             return render_template('admin_edit_classroom.html', classroom=classroom)
+             return render_template('admin_edit_classroom.html', classroom=classroom, datetime=datetime)
 
         db.session.commit()
         flash('Classroom updated successfully', 'success')
         return redirect(url_for('manage_classrooms'))
 
-    return render_template('admin_edit_classroom.html', classroom=classroom)
+    return render_template('admin_edit_classroom.html', classroom=classroom, datetime=datetime)
 
 @app.route('/admin/classrooms/delete/<int:classroom_id>', methods=['POST'])
 @login_required
@@ -602,12 +679,21 @@ def edit_classroom(classroom_id):
 def delete_classroom(classroom_id):
     classroom = Classroom.query.get_or_404(classroom_id)
 
-    # Delete all reservations associated with this classroom
-    Reservation.query.filter_by(classroom_id=classroom_id).delete()
-    db.session.delete(classroom)
-    db.session.commit()
+    try:
+        # Delete all associated access codes before deleting reservations and classroom
+        # Filter by classroom_id in ReservationCodes
+        # This filter requires classroom_id to be a column in ReservationCodes
+        ReservationCodes.query.filter_by(classroom_id=classroom_id).delete()
+        Reservation.query.filter_by(classroom_id=classroom_id).delete()
+        db.session.delete(classroom)
+        db.session.commit()
+        flash('Classroom and associated data deleted successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error deleting classroom {classroom_id}: {str(e)}")
+        flash('Error deleting classroom', 'danger')
 
-    flash('Classroom deleted successfully', 'success')
+
     return redirect(url_for('manage_classrooms'))
 
 # ========== API ROUTES ==========
@@ -618,18 +704,13 @@ def rooms_status():
 
     total_rooms = len(classrooms)
     occupied_rooms = sum(1 for c in classrooms if c.is_occupied())
-    # Avoid division by zero
     avg_occupancy = round((occupied_rooms / total_rooms) * 100) if total_rooms > 0 else 0
 
     noise_levels = [c.get_noise_level() for c in classrooms]
-     # Avoid division by zero
     avg_sound_level = round(sum(noise_levels) / len(noise_levels)) if noise_levels else 0
 
-    # Calculate peak hours (simplified)
     now = datetime.now().hour
-    # Example logic: Consider peak during morning/afternoon
     peak_hours = 18 if (9 <= now <= 11 or 15 <= now <= 17) else 12
-
 
     return jsonify({
         'avg_occupancy': avg_occupancy,
@@ -649,34 +730,38 @@ def rooms_status():
 @app.route('/api/room/<int:room_id>/availability')
 @login_required
 def room_availability(room_id):
-    # Use request.args.get with a default to avoid errors if date is missing
     date_str = request.args.get('date', datetime.today().strftime('%Y-%m-%d'))
     try:
-        date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
     except ValueError:
-        # Return error if date format is invalid
         return jsonify({'error': 'Invalid date format'}), 400
 
     classroom = Classroom.query.get_or_404(room_id)
 
-    # Get reservations for the specific date and classroom
     reservations = Reservation.query.filter(
-        db.func.date(Reservation.start_time) == date,
+        db.func.date(Reservation.start_time) == selected_date,
         Reservation.classroom_id == room_id
     ).all()
 
-    # Extract start times of reserved slots
     reserved_starts = [r.start_time.strftime('%H:%M') for r in reservations]
 
-    # Determine available slots by comparing with all time slots
-    available_slots = [slot for slot in TIME_SLOTS if slot['start'] not in reserved_starts]
+    now = datetime.now()
+    available_slots = []
+    for slot in TIME_SLOTS:
+        if slot['start'] not in reserved_starts:
+            slot_end_datetime = datetime.strptime(f"{date_str} {slot['end']}", '%Y-%m-%d %H:%M')
+
+            if selected_date == now.date() and slot_end_datetime < now:
+                continue # Skip slots in the past for today
+            else:
+                available_slots.append(slot)
 
     return jsonify({
-        'is_occupied': classroom.is_occupied(), # Note: This checks current occupancy, not occupancy for the selected date
+        'is_occupied': classroom.is_occupied(),
         'available_slots': available_slots,
         'capacity': classroom.capacity,
         'description': classroom.description,
-        'name': classroom.name # Added classroom name for potential use in modal
+        'name': classroom.name
     })
 
 # ========== INITIALIZATION ==========
@@ -687,6 +772,7 @@ def load_user(user_id):
 
 def create_tables():
     with app.app_context():
+        # This will create User, Classroom, Reservation, and the correctly defined ReservationCodes tables
         db.create_all()
 
         # Create admin user if none exists
@@ -695,9 +781,9 @@ def create_tables():
                 username='admin',
                 email='admin@example.com',
                 is_admin=True,
-                is_verified=True # Auto-verify admin
+                is_verified=True
             )
-            admin.set_password('admin123') # IMPORTANT: Change this default password!
+            admin.set_password('admin123')
             db.session.add(admin)
 
         # Create default classrooms if none exist
@@ -710,7 +796,7 @@ def create_tables():
                 {'name': 'Nobel', 'capacity': 10, 'color': '#9C27B0'},
                 {'name': 'Elhuyar', 'capacity': 15, 'color': '#FF9800'},
                 {'name': 'Gauss', 'capacity': 12, 'color': '#607D8B'},
-                {'name': 'Joule', 'capacity': 10, 'color': '#795548'},
+                {'name': 'Joule', 'capacity': 10, 'color': '#795548'}, # Corrected typo 'Joule'
                 {'name': 'Marie Curie', 'capacity': 15, 'color': '#E91E63'},
                 {'name': 'Newton', 'capacity': 20, 'color': '#3F51B5'}
             ]
@@ -728,5 +814,4 @@ def create_tables():
 
 if __name__ == '__main__':
     create_tables() # Ensure tables and initial data exist
-    # Debug=True should only be used during development
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)

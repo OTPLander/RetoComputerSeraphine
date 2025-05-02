@@ -6,6 +6,10 @@
     <title>Admin Dashboard - Study Room Monitor</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Add any specific styles for the new table here if needed,
+           but try to reuse existing .admin-table styles */
+    </style>
 </head>
 <body>
     <header class="white-section">
@@ -65,6 +69,95 @@
                 </div>
             </div>
         </section>
+
+        {# Section for Reservation Management #}
+        <section class="white-section">
+            <div class="content-wrapper">
+                <h2>Reservation Management</h2>
+
+                <div class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>User</th>
+                                <th>Classroom</th>
+                                <th>Start Time</th>
+                                <th>End Time</th>
+                                <th>Created At</th>
+                                {# Optional: Add an Actions column if you want to add delete/edit later #}
+                                {#
+                                <th>Actions</th> #}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for reservation in reservations %}
+                            <tr>
+                                <td>{{ reservation.access_code_rel.code }}</td>
+                                {# Access the username via the user relationship #}
+                                <td>{{ reservation.user.username }}</td>
+                                {# Access the classroom name via the classroom relationship #}
+                                <td>{{ reservation.classroom.name }}</td>
+                                <td>{{ reservation.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ reservation.end_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ reservation.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                {# Optional Actions column content #}
+                                {#
+                                <td class="actions">
+                                    <form method="POST" action="{{ url_for('delete_reservation', reservation_id=reservation.id) }}" onsubmit="return confirm('Are you sure you want to delete this reservation?');">
+                                        <button type="submit" class="action-btn delete">Delete</button>
+                                    </form>
+                                </td> #}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        {# NEW SECTION FOR MIOTY MESSAGES #}
+        <section class="white-section">
+            <div class="content-wrapper">
+                <h2>Mioty Messages</h2>
+
+                <div class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Timestamp</th>
+                                <th>Key Value</th>
+                                <th>Noise</th>
+                                <th>Temperature (°C)</th>
+                                <th>Luminosity</th>
+                                <th>Raw Data</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if messages %} {# Check if messages list is not empty #}
+                            {% for message in messages %}
+                            <tr>
+                                <td>{{ message.id }}</td>
+                                <td>{{ message.timestamp.strftime('%Y-%m-%d %H:%M:%S') if message.timestamp else 'N/A' }}</td> {# Format timestamp #}
+                                <td>{{ message.key_value if message.key_value is not none else 'N/A' }}</td> {# Handle None values #}
+                                <td>{{ message.noise if message.noise is not none else 'N/A' }}</td> {# Handle None values #}
+                                <td>{{ "%.2f"|format(message.temperature) if message.temperature is not none else 'N/A' }}</td> {# Format temperature and handle None #}
+                                <td>{{ message.luminosity if message.luminosity is not none else 'N/A' }}</td> {# Handle None values #}
+                                <td class="raw-data-cell">{{ message.raw_data if message.raw_data is not none else 'N/A' }}</td> {# Handle None values #}
+                            </tr>
+                            {% endfor %}
+                            {% else %} {# Display message if no messages are available #}
+                            <tr>
+                                <td colspan="7" style="text-align: center;">No Mioty messages found in the database.</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <footer class="red-section">
@@ -72,5 +165,14 @@
             <p>© 2025 Tecnun - University of Navarra</p>
         </div>
     </footer>
+
+    <style>
+        /* Optional: Add some styling for the raw data cell to prevent it from stretching the table too much */
+        .raw-data-cell {
+            max-width: 200px; /* Adjust as needed */
+            overflow-x: auto; /* Add horizontal scroll if content overflows */
+            word-break: break-all; /* Break long words */
+        }
+    </style>
 </body>
 </html>

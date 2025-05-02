@@ -1,0 +1,63 @@
+{
+  "version": "1.0",
+  "typeEui": "70b3d56770110198",
+  "meta": {
+    "name": "Library_Checker",
+    "vendor": "Computer_Science"
+  },
+  "uplink": [
+    {
+      "id": 0,
+      "crypto": 0,
+      "payload": [
+        {
+          "name": "keypad",
+          "component": "8bitKeyboard"
+        },
+        {
+          "name": "noise",
+          "component": "16bitNoise"
+        },
+        {
+          "name": "temperature",
+          "component": "16bitTemperature"
+        },
+        {
+          "name": "luminosity",
+          "component": "16bitLuminosity"
+        }
+      ]
+    }
+  ],
+  "component": {
+    "8bitKeyboard": {
+      "size": 8,
+      "type": "int",
+      "func": "$/1",
+      "unit": "key",
+      "littleEndian": true
+    },
+    "16bitNoise": {
+      "size": 16,
+      "type": "int",
+      "func": "$/1",
+      "unit": "relative_noise",
+      "littleEndian": true
+    },
+    "16bitTemperature": {
+      "size": 16,
+      "type": "int",
+      "func": "$*100",
+      "unit": "celsius_x100",
+      "littleEndian": true
+    },
+    "16bitLuminosity": {
+      "size": 16,
+      "type": "int",
+      "func": "$/1",
+      "unit": "lux",
+      "littleEndian": true
+    }
+  }
+}
+

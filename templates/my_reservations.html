@@ -24,7 +24,9 @@
 
             {% if current_user.is_authenticated %}
             <div class="user-links">
+                {# Link back to the main rooms page #}
                 <a href="{{ url_for('index') }}" class="user-link">Back to Rooms</a>
+                {# Logout link #}
                 <a href="{{ url_for('logout') }}" class="user-link">Logout</a>
             </div>
             {% endif %}
@@ -34,7 +36,7 @@
     <main>
         <section class="white-section">
             <div class="content-wrapper">
-                {# Display Flash Messages #}
+                {# Display Flash Messages (success, danger, info, etc.) #}
                 {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                 <div class="flash-messages">
@@ -47,9 +49,8 @@
 
                 {% if reservations %}
                 <div class="reservations-list">
-                    {# Loop through all reservations #}
+                    {# Loop through each reservation passed from the Flask route #}
                     {% for reservation in reservations %}
-                    {# Check if reservation is active (upcoming) or past using the new property #}
                     <div class="reservation-card {% if reservation.is_active %}active{% else %}past{% endif %}">
                         <div class="reservation-header">
                             <h3>{{ reservation.classroom.name }} Room</h3>
@@ -58,19 +59,31 @@
                         <div class="reservation-time">
                             {{ reservation.start_time.strftime('%H:%M') }} - {{ reservation.end_time.strftime('%H:%M') }}
                         </div>
+
+                        {# ADD THIS BLOCK to display the Access Code #}
+                        {% if reservation.access_code_rel %} {# Check if an access code exists for this reservation #}
+                        <div class="access-code">
+                            Access Code: <strong>{{ reservation.access_code_rel.code }}</strong>
+                        </div>
+                        {% endif %}
+                        {# END OF ADDED BLOCK #}
+
+
                         <div class="reservation-actions">
-                            {# Only show cancel button for active reservations #}
+                            {# Only show the Cancel button if the reservation is active #}
                             {% if reservation.is_active %}
                             <form method="POST" action="{{ url_for('cancel_reservation', reservation_id=reservation.id) }}"
                                   onsubmit="return confirm('Are you sure you want to cancel this reservation?');">
                                 <button type="submit" class="cancel-btn">Cancel</button>
                             </form>
                             {% endif %}
+                            {# You could add other actions here for past reservations if needed #}
                         </div>
                     </div>
                     {% endfor %}
                 </div>
                 {% else %}
+                {# Message displayed if the user has no reservations #}
                 <div class="no-reservations">
                     <p>You don't have any reservations yet.</p>
                     <a href="{{ url_for('index') }}" class="btn">Find a Classroom</a>
@@ -83,8 +96,8 @@
     <footer>
         <div class="content-wrapper red-section">
             {# Added red-section class here for the footer #}
-            {# Use datetime property passed from Flask context or just hardcode the year #}
-            <p>© {{ datetime.now().year if datetime else '2025' }} Tecnun - University of Navarra</p> {# Using datetime property if available #}
+            {# Display copyright year - uses datetime property if available from Flask #}
+            <p>© {{ datetime.now().year if datetime else '2025' }} Tecnun - University of Navarra</p>
         </div>
     </footer>
 
