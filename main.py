@@ -1,4 +1,4 @@
-import os
+﻿import os
 from flask import Flask, render_template, request, redirect, url_for, flash, abort, jsonify
 from functools import wraps
 from flask_sqlalchemy import SQLAlchemy
@@ -10,6 +10,45 @@ import random # Import random for code generation
 import smtplib
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
+import threading
+import paho.mqtt.client as mqtt
+import json
+import struct
+
+def run_mqtt_client():
+    brokerMioty = "192.168.10.153"
+    portMioty = 1883
+    topicMioty = 'mioty/00-00-00-00-00-00-00-00/70-b3-d5-67-70-11-01-98/uplink'
+
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            print("✅ Conectado al broker MQTT")
+            client.subscribe(topicMioty)
+        else:
+            print("❌ Error al conectar MQTT, código:", rc)
+
+    def on_message(client, userdata, msg):
+        print("\n📥 Mensaje MQTT recibido:")
+        try:
+            js = json.loads(msg.payload.decode("utf-8"))
+            data = js.get("data", [])
+            byte_data = bytes(data[:7])
+            key, noise, temperature, luminosity = struct.unpack('<BHHH', byte_data)
+            
+            print(f"🎹 Tecla: {chr(key) if 32 <= key <= 126 else key}")
+            print(f"🎧 Ruido: {noise}")
+            print(f"🌡️ Temperatura: {temperature / 100:.2f}°C")
+            print(f"💡 Luminosidad: {luminosity}")
+
+        except Exception as e:
+            print("❌ Error procesando mensaje MQTT:", e)
+
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    client.connect(brokerMioty, portMioty, 60)
+    client.loop_forever()
 
 # Load environment variables
 load_dotenv()
@@ -543,6 +582,7 @@ def admin_dashboard():
     # Fetch all reservations and eagerly load user and classroom relationships
     # Eager loading helps avoid N+1 queries in the template
     reservations = Reservation.query.options(db.joinedload(Reservation.user), db.joinedload(Reservation.classroom)).order_by(Reservation.start_time.desc()).all()
+   
 
     # Pass reservations to the template
     return render_template('admin_dashboard.html', users=users, classrooms=classrooms, reservations=reservations, datetime=datetime)
@@ -813,5 +853,11 @@ def create_tables():
         db.session.commit()
 
 if __name__ == '__main__':
-    create_tables() # Ensure tables and initial data exist
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
+        create_tables()
+    
+    # Iniciar cliente MQTT en un hilo separado
+        mqtt_thread = threading.Thread(target=run_mqtt_client, daemon=True)
+        mqtt_thread.start()
+    
+    # Iniciar aplicación Flask
+        app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
