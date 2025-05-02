@@ -59,20 +59,23 @@
 
     </main>
 
-    <footer class="red-section">
-        <div class="content-wrapper">
-            <p>© 2025 Tecnun - University of Navarra</p>
+    <footer>
+        <div class="content-wrapper red-section">
+            {# Added red-section class here for the footer #}
+            <p>© {{ datetime.now().year }} Tecnun - University of Navarra</p> {# Updated year #}
         </div>
     </footer>
 
-    {# Modal structure with aria-hidden attribute #}
+    {# Modal structure with aria-hidden attribute - MODIFIED #}
     <div id="reservationModal" class="modal" aria-hidden="true">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
             <h3 id="modalRoomName"></h3>
-            <input type="date" id="reservationDate" min="{{ today }}">
+            <input type="date" id="reservationDate" min="{{ datetime.today().strftime('%Y-%m-%d') }}"> {# Set min date using Jinja #}
             <div class="time-slots-container" id="timeSlots">
             </div>
+            <button id="confirmReservationBtn" style="display: none; margin-top: 20px; padding: 10px; background-color: var(--tecnun-red); color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">Confirm Reservation</button>
+            <p id="modalMessage" style="margin-top: 10px; text-align: center;"></p>
         </div>
     </div>
 
@@ -89,15 +92,33 @@
             { start: '18:00', end: '19:30', label: '18:00 - 19:30' }
         ];
 
+        // Get references to modal elements
         const modal = document.getElementById("reservationModal");
         const span = document.getElementsByClassName("close-btn")[0];
         const modalRoomName = document.getElementById("modalRoomName");
         const timeSlotsContainer = document.getElementById("timeSlots");
         const reservationDateInput = document.getElementById("reservationDate");
 
+        // NEW: Get references to the new button and message elements
+        const confirmReservationBtn = document.getElementById("confirmReservationBtn");
+        const modalMessage = document.getElementById("modalMessage");
+
+        // NEW: Variable to store the selected time slot data
+        let selectedSlotData = null;
+
 
         // Function to open modal and fetch time slots
         function openReservationModal(roomId, roomName) {
+            // Clear previous selection and message when opening modal
+            selectedSlotData = null;
+            confirmReservationBtn.style.display = 'none';
+            modalMessage.textContent = '';
+            modalMessage.style.color = '';
+             document.querySelectorAll('.time-slot').forEach(slot => {
+                slot.classList.remove('selected');
+            });
+
+
             modal.style.display = "flex"; // Use flex to center
             modal.setAttribute('aria-hidden', 'false'); // Indicate modal is visible for accessibility
             modalRoomName.textContent = `Reserve ${roomName} Room`;
@@ -105,15 +126,26 @@
             // Set default date to today and fetch slots
             const today = new Date();
             const formattedDate = today.toISOString().split('T')[0];
-            reservationDateInput.value = formattedDate;
+            reservationDateInput.value = formattedDate; // Set the value of the date input
+            // Set min attribute for date input - also done in Jinja, but good to set with JS too
+            reservationDateInput.min = formattedDate;
+
+
             fetchAvailableSlots(roomId, formattedDate);
 
-            // Store room ID for later use
+            // Store room ID for later use on the modal element itself
             modal.dataset.roomId = roomId;
         }
 
         // Function to fetch and display available time slots for a given room and date
         function fetchAvailableSlots(roomId, date) {
+             // Clear existing slots and show loading or message
+            timeSlotsContainer.innerHTML = '<p>Loading time slots...</p>';
+            selectedSlotData = null; // Clear selected data on date change
+            confirmReservationBtn.style.display = 'none'; // Hide confirm button on date change
+            modalMessage.textContent = ''; // Clear messages on date change
+            modalMessage.style.color = ''; // Reset message color
+
             fetch(`/api/room/${roomId}/availability?date=${date}`)
                 .then(response => response.json())
                 .then(data => {
@@ -123,8 +155,11 @@
                             const slotElement = document.createElement('div');
                             slotElement.classList.add('time-slot');
                             slotElement.textContent = slot.label;
-                            slotElement.dataset.startTime = slot.start; // Store start time
-                            slotElement.dataset.endTime = slot.end; // Store end time
+                            // Data attributes are useful, but for the POST request, we'll send the label
+                            slotElement.dataset.startTime = slot.start;
+                            slotElement.dataset.endTime = slot.end;
+
+                            // Add click listener to each time slot
                             slotElement.addEventListener('click', () => selectTimeSlot(slotElement, roomId, date));
                             timeSlotsContainer.appendChild(slotElement);
                         });
@@ -134,31 +169,119 @@
                 })
                 .catch(error => {
                     console.error('Error fetching available slots:', error);
-                    timeSlotsContainer.innerHTML = '<p>Error loading time slots.</p>';
+                    timeSlotsContainer.innerHTML = '<p style="color: red;">Error loading time slots.</p>'; // Indicate error
                 });
         }
 
-        // Function to handle time slot selection
+        // Function to handle time slot selection (MODIFIED)
         function selectTimeSlot(slotElement, roomId, date) {
-            const startTime = slotElement.dataset.startTime;
-            const endTime = slotElement.dataset.endTime;
+            // Remove 'selected' class from all time slots first
+            document.querySelectorAll('.time-slot').forEach(slot => {
+                slot.classList.remove('selected');
+            });
 
-            // Construct the full datetime strings
-            const startDatetime = `${date} ${startTime}`;
-            const endDatetime = `${date} ${endTime}`;
+            // Add 'selected' class to the clicked slot
+            slotElement.classList.add('selected');
 
+            // Store the selected slot data - only need date and label for the POST request
+            selectedSlotData = {
+                date: date,
+                label: slotElement.textContent // Store the text content (label)
+            };
 
-            // Redirect to the reservation page with pre-selected values
-            window.location.href = `/reserve/${roomId}?date=${date}&time_slot=${slotElement.textContent}`;
+            // Show the confirm button and clear any previous messages
+            confirmReservationBtn.style.display = 'block';
+            modalMessage.textContent = ''; // Clear any previous error messages
+            modalMessage.style.color = ''; // Reset message color
         }
 
+        // Add event listener for the new Confirm Reservation button (NEW AJAX CALL)
+        confirmReservationBtn.addEventListener('click', function() {
+            if (!selectedSlotData) {
+                modalMessage.style.color = 'red';
+                modalMessage.textContent = 'Please select a time slot.';
+                return; // Stop if no slot is selected
+            }
 
-        // Close the modal
+            const roomId = modal.dataset.roomId; // Get the room ID stored on the modal
+
+            // Prepare the data to send in the POST request
+            const formData = new FormData();
+            formData.append('date', selectedSlotData.date);
+            formData.append('time_slot', selectedSlotData.label); // Send the time slot label
+
+            // Disable the button and show a loading indicator (optional but good UX)
+            confirmReservationBtn.disabled = true;
+            confirmReservationBtn.textContent = 'Reserving...';
+            modalMessage.textContent = ''; // Clear previous messages
+
+            // Perform the AJAX POST request using the Fetch API
+            fetch(`/reserve/${roomId}`, {
+                method: 'POST', // Send as a POST request
+                body: formData  // Send the form data
+            })
+            .then(response => {
+                // Check if the response was successful (status 200-299)
+                if (!response.ok) {
+                     // If not OK, throw an error that includes the response
+                    return response.json().then(err => {
+                        const error = new Error(err.message || 'Reservation failed');
+                        error.status = response.status;
+                        error.responseJson = err; // Attach the parsed JSON error response
+                        throw error;
+                    });
+                }
+                // If OK, parse the JSON success response
+                return response.json();
+            })
+            .then(data => {
+                // Handle the JSON response from the server (status === 'success')
+                modalMessage.style.color = 'green';
+                modalMessage.textContent = data.message + " Redirecting...";
+
+                // Redirect to the my_reservations page after a short delay
+                setTimeout(() => {
+                    window.location.href = "{{ url_for('my_reservations') }}";
+                }, 1500); // Redirect after 1.5 seconds
+
+            })
+            .catch(error => {
+                // Handle network errors or errors thrown from the .then blocks
+                console.error('Reservation failed:', error);
+                modalMessage.style.color = 'red';
+
+                // Display the specific error message from the server if available,
+                // otherwise show a generic message.
+                if (error.responseJson && error.responseJson.message) {
+                     modalMessage.textContent = error.responseJson.message;
+                } else {
+                    modalMessage.textContent = error.message || 'An unexpected error occurred during reservation.';
+                }
+
+                 // Optional: Re-fetch available slots on error, as the slot might have been taken
+                 // by someone else simultaneously (409 Conflict)
+                 const roomId = modal.dataset.roomId;
+                 const selectedDate = reservationDateInput.value;
+                 if (roomId && selectedDate) {
+                      fetchAvailableSlots(roomId, selectedDate);
+                 }
+            })
+            .finally(() => {
+                // Re-enable the button regardless of success or failure
+                confirmReservationBtn.disabled = false;
+                confirmReservationBtn.textContent = 'Confirm Reservation';
+                // Keep modal open on error to show message; will close on success redirect.
+            });
+        });
+
+
+        // Close the modal when the 'x' is clicked
         span.onclick = function () {
             modal.style.display = "none";
             modal.setAttribute('aria-hidden', 'true'); // Indicate modal is hidden for accessibility
         }
 
+        // Close the modal when clicking outside of it
         window.onclick = function (event) {
             if (event.target == modal) {
                 modal.style.display = "none";
@@ -166,20 +289,20 @@
             }
         }
 
-        // Add event listeners to room cards
+        // Add event listeners to room cards to open the modal
         document.querySelectorAll('.room-card').forEach(card => {
             card.addEventListener('click', function () {
-                const roomId = this.dataset.roomId;
-                const roomName = this.dataset.roomName;
-                openReservationModal(roomId, roomName);
+                const roomId = this.dataset.roomId; // Get room ID from data attribute
+                const roomName = this.dataset.roomName; // Get room name from data attribute
+                openReservationModal(roomId, roomName); // Call the function to open the modal
             });
         });
 
-        // Event listener for date input changes
+        // Event listener for date input changes to update available slots
         reservationDateInput.addEventListener('change', function () {
             const selectedDate = this.value;
             const roomId = modal.dataset.roomId; // Get room ID from modal dataset
-            if (roomId) {
+            if (roomId && selectedDate) {
                 fetchAvailableSlots(roomId, selectedDate);
             }
         });
@@ -190,13 +313,7 @@
             fetch('/api/rooms/status')
                 .then(response => response.json())
                 .then(data => {
-                    // Note: The following lines updated the removed sections.
-                    // They are commented out as the sections are removed.
-                    // document.getElementById('avgOccupancy').textContent = data.avg_occupancy + '%';
-                    // document.getElementById('avgSoundLevel').textContent = data.avg_sound_level + ' dB';
-                    // document.getElementById('peakHours').textContent = data.peak_hours;
-
-                    // Actualizar estado de las salas
+                    // Update status of each room card
                     data.rooms.forEach(room => {
                         const roomElement = document.querySelector(`.room-card[data-room-id="${room.id}"]`);
                         if (roomElement) {
@@ -212,13 +329,20 @@
                             soundElement.nextElementSibling.textContent = `${room.noise_level} dB`;
                         }
                     });
+                })
+                .catch(error => {
+                     console.error('Error updating room status:', error);
+                     // Optionally display a message on the page about the update error
                 });
         }
 
         // Update every 30 seconds
         setInterval(updateRoomStatus, 30000);
+
+        // Initial updates when the page loads
         document.addEventListener('DOMContentLoaded', () => {
-            updateRoomStatus(); // Initial update
+            updateRoomStatus(); // Initial update of room statuses
+
             // Set min date for the date picker
             const today = new Date().toISOString().split('T')[0];
             reservationDateInput.min = today;
