@@ -30,7 +30,7 @@ def on_message(client, userdata, msg):
         # Desempaquetamos en Little Endian: 1B + 3x 2B
         key, noise, temperature, luminosity = struct.unpack('<BHHH', byte_data)
 
-        print(f"🎹 Tecla: {chr(key) if 32 <= key <= 126 else key}")
+        print(f"🎹 Tecla: {key if 32 <= key <= 126 else key}")
         print(f"🎧 Ruido: {noise}")
         print(f"🌡️ Temperatura: {temperature *1:.2f}°C")
         print(f"💡 Luminosidad: {luminosity}")
