@@ -32,7 +32,7 @@ def on_message(client, userdata, msg):
 
         print(f"🎹 Tecla: {chr(key) if 32 <= key <= 126 else key}")
         print(f"🎧 Ruido: {noise}")
-        print(f"🌡️ Temperatura: {temperature / 100:.2f}°C")
+        print(f"🌡️ Temperatura: {temperature *1:.2f}°C")
         print(f"💡 Luminosidad: {luminosity}")
 
     except Exception as e:
