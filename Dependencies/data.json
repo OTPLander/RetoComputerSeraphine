@@ -27,7 +27,7 @@
     ],
     "component": {
         "16bitKeyboard": {
-            "size": 16,
+            "size": 8,
             "type": "int",
             "func": "$/1",
             "unit": "key",

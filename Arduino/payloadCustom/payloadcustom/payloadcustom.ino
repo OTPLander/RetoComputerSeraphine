@@ -21,10 +21,16 @@ MS5637 ms5637;
 SHT31 sht31;
 SI1141 si1141;
 M3BDemoHelper m3bDemo;
+//variables
+char key;
+uint16_t noise;
+uint32_t userKey;
+uint32_t currentTick;
+
 //TxData[8];
 // input new EUI
 uint32_t cnt = 0;
-uint8_t TxData[8];
+uint8_t TxData[7];
 uint8_t eui64[8] = {0x70, 0xb3, 0xd5, 0x67, 0x70, 0x11, 0x01, 0x98};
 uint8_t shortAdress[2] = {eui64[6], eui64[7]}; // get the last two byte as the short address
 
@@ -104,24 +110,36 @@ SerialM3B.print("-");}
 
 void loop(){
 digitalWrite(BLUE_LED, LOW);
-sendData();
 digitalWrite(BLUE_LED, HIGH);
-delay(1000);
+if(currentTick+1000 < HAL_GetTick()){
+sendData();
+cleanVars();
+currentTick = HAL_GetTick();
+digitalWrite(BLUE_LED, HIGH);}
 }
 void sendData() {
-    // 16bitKeyboard (2 bytes)
-    TxData[0] = 0x00;  // Parte alta del número (big-endian)
-    TxData[1] = 0x01;  // Parte baja del número
-
+    // 8bitKeyboard (2 bytes)
+    TxData[0] = key;
     // 16bitNoise (2 bytes)
-    TxData[2] = 0x00;  // Parte alta
-    TxData[3] = 0x02;  // Parte baja
+    TxData[1] = noise & 0xFF; // Parte baja del número
+    TxData[2] = (noise >> 8) & 0xFF;  // Parte alta
+    //32 bit UserKey
+    TxData[3] = userKey & 0xFF;        // Byte menos significativo (LSB)
+    TxData[4] = (userKey >> 8) & 0xFF;
+    TxData[5] = (userKey >> 16) & 0xFF;
+    TxData[6] = (userKey >> 24) & 0xFF; // Byte más significativo (MSB)
 
-    // 32bitIdKey (4 bytes) → ID de 32 bits en big-endian
-    TxData[4] = 0x00;  // Byte más significativo
-    TxData[5] = 0x00;
-    TxData[6] = 0x00;
-    TxData[7] = 0x03;  // Byte menos significativo
-miotyAtClient_sendMessageUniMPF(TxData, 8, &cnt);
+miotyAtClient_sendMessageUniMPF(TxData, 7, &cnt);
 //SerialM3B.println("");
 }
+
+void readData() {
+  key = keypad.getKey();
+  sound = analogRead(MIC_PIN); // Leer el valor del micrófono
+}
+
+void cleanVars(){
+  key = '\0';
+}
+
+
