@@ -140,7 +140,7 @@
                             <tr>
                                 <td>{{ message.id }}</td>
                                 <td>{{ message.timestamp.strftime('%Y-%m-%d %H:%M:%S') if message.timestamp else 'N/A' }}</td> {# Format timestamp #}
-                                <td>{{ message.key_value if message.key_value is not none else 'N/A' }}</td> {# Handle None values #}
+                                <td>{{ message.key_code if message.key_value is not none else 'N/A' }}</td> {# Handle None values #}
                                 <td>{{ message.noise if message.noise is not none else 'N/A' }}</td> {# Handle None values #}
                                 <td>{{ "%.2f"|format(message.temperature) if message.temperature is not none else 'N/A' }}</td> {# Format temperature and handle None #}
                                 <td>{{ message.luminosity if message.luminosity is not none else 'N/A' }}</td> {# Handle None values #}

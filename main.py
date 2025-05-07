@@ -38,7 +38,10 @@ def run_mqtt_client():
             byte_data = bytes(data[:7])
             key, noise, temperature, luminosity = struct.unpack('<BHHH', byte_data)
             
+            noise = round(noise * 35/880)
+            
             print(f"🎹 Tecla: {chr(key) if 32 <= key <= 126 else key}")
+            print(f"________________- Tecla: {key}")
             print(f"🎧 Ruido: {noise}")
             print(f"🌡️ Temperatura: {temperature / 100:.2f}°C")
             print(f"💡 Luminosidad: {luminosity}")
