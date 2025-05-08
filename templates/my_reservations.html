@@ -93,11 +93,9 @@
         </section>
     </main>
 
-    <footer>
-        <div class="content-wrapper red-section">
-            {# Added red-section class here for the footer #}
-            {# Display copyright year - uses datetime property if available from Flask #}
-            <p>© {{ datetime.now().year if datetime else '2025' }} Tecnun - University of Navarra</p>
+    <footer class="red-section">
+        <div class="content-wrapper">
+            <p>© 2025 Tecnun - University of Navarra</p>
         </div>
     </footer>
 

@@ -772,3 +772,81 @@ footer {
     /* Ensure the logo doesn't grow and maintains its size */
     flex-shrink: 0;
 }
+/* Existing .button rule in your styles.css */
+/* Apply common styles to both <a> and <button> with the 'button' class */
+a.button,
+button.button {
+    /* --- Layout and Centering (using Flexbox) --- */
+    display: flex; /* Use flexbox for centering */
+    justify-content: center; /* Horizontally center content along the main axis */
+    align-items: center; /* Vertically center content along the cross axis */
+    /* Note: text-align: center; and vertical-align are often redundant when using flexbox for centering */
+    /* --- Size and Box Model --- */
+    padding: 10px 15px;
+    border: none;
+    box-sizing: border-box;
+    /* --- Font and Text Styling --- */
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.2; /* Still good to have, but vertical centering is handled by align-items */
+    text-decoration: none; /* Remove underline for links */
+    color: white; /* Set text color */
+    /* --- Appearance and Interaction --- */
+    -webkit-appearance: none; /* Reset default browser button styles */
+    -moz-appearance: none;
+    appearance: none;
+    background-color: #ff0066; /* Set background color */
+    border-radius: 5px; /* Add rounded corners */
+    cursor: pointer; /* Change cursor */
+    transition: background-color 0.3s ease; /* Smooth transition for hover effects */
+    /* Ensure consistency if needed, though flexbox should handle alignment */
+    /* text-align: center; */
+    /* vertical-align: middle; */
+}
+
+    /* Add hover effect for visual feedback */
+    a.button:hover,
+    button.button:hover {
+        background-color: var(--tecnun-dark-red); /* Darker red on hover */
+        /* You might also add color: white; here again for specificity if needed */
+    }
+
+    /* Add active/pressed effect */
+    a.button:active,
+    button.button:active {
+        background-color: var(--tecnun-darker-red); /* Even darker red when pressed */
+        transform: translateY(1px); /* Slight pressed effect */
+    }
+
+    /* --- Styles for the smaller buttons --- */
+    a.button.small,
+    button.button.small {
+        /* Apply smaller styles here */
+        padding: 5px 10px;
+        font-size: 0.8rem;
+        height: 30px; /* Explicit height included as requested */
+        /* Note: When using flexbox and a fixed height, the padding and font-size
+             will define the internal spacing, and flexbox will center the
+             content within the 30px height. */
+    }
+.graph-navigation {
+    display: flex; /* Makes the container a flex container, laying out children in a row by default */
+    align-items: center; /* Vertically aligns the flex items (buttons and span) in the center */
+    /* Optional: Add space between the items */
+    gap: 20px; /* Adds space between the buttons and the span. Adjust 20px as needed. */
+    /* justify-content: center; /* Optional: Use this if you want the entire group (buttons + span) to be centered horizontally on the page */
+    /* Add any other styling specific to the navigation container itself (like margin to position the block) */
+    margin-top: 20px; /* Example: Add space above the navigation block */
+    margin-bottom: 20px; /* Example: Add space below it */
+}
+
+    /* Optional: Add or adjust styling for the span text if needed */
+    .graph-navigation span {
+        /* For example, if you want to ensure the font size/weight */
+        /* font-size: 1rem; */
+        /* font-weight: normal; */
+        /* If you didn't use 'gap', you could use margin: 0 10px; here */
+    }
+
+/* You might want smaller hover/active effects if needed, but often the general ones suffice */

@@ -4,7 +4,7 @@ from functools import wraps
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 import secrets
 import random # Import random for code generation
 import smtplib
@@ -12,6 +12,9 @@ from email.mime.text import MIMEText
 from dotenv import load_dotenv
 import pandas as pd # Import pandas to read Excel files
 import sqlalchemy # Import sqlalchemy for inspecting tables
+import matplotlib
+matplotlib.use('Agg') # Set the backend to Agg (non-GUI)
+# Now import pyplot
 import matplotlib.pyplot as plt
 
 # Load environment variables
@@ -559,16 +562,18 @@ def cancel_reservation(reservation_id):
 # --- Graph Generation Function (Reading from Excel) ---
 def generate_and_save_graphs():
     """Generates graphs from Mioty data read directly from an Excel file
-       and saves them as static files."""
+        and saves them as static files."""
     global global_graph_urls # Declare that we are using the global variable
 
     print("Generating and saving graphs from Excel...")
 
     # Define the path to the Excel file
-    # Ensure this path is correct relative to your Flask app's root directory
-    excel_file_path = os.path.join(app.root_path, 'datos_inventados_V5.xlsx')
+    # Using app.instance_path because the user specified the file is in the instance folder
+    # Ensure this path is correct relative to your Flask app's instance directory
+    excel_file_path = os.path.join(app.instance_path, 'datos_inventados_V5.xlsx')
 
     # Ensure the static/graphs directory exists
+    # Assuming app.static_folder is correctly configured (defaults to 'static')
     graph_dir = os.path.join(app.static_folder, 'graphs')
     if not os.path.exists(graph_dir):
         os.makedirs(graph_dir)
@@ -581,11 +586,11 @@ def generate_and_save_graphs():
         df_mioty = pd.read_excel(excel_file_path)
         print("Data read from Excel.")
 
-        # Assuming your Excel columns are named 'Sample Date', 'Sample Hour', 'Student ID', 'Temperature', 'Luminosity', 'Noise'
-        # Adjust these names if your Excel columns are different
-        required_columns = ['Sample_Date', 'Sample_Hour', 'Student_ID', 'Temp(ºc)   ', 'Light_Level(Lux)', 'Noise_Level(dB)']
+        # Define the required columns based on user input
+        required_columns = ['Sample_Date', 'Sample_Hour', 'Student_ID', 'Temp(ºc)', 'Light_Level(Lux)', 'Noise_Level(dB)']
         if not all(col in df_mioty.columns for col in required_columns):
             print(f"Error: Excel file must contain the following columns: {required_columns}")
+            print(f"Columns found: {df_mioty.columns.tolist()}") # Print found columns for debugging
             global_graph_urls = {} # Assign empty dict if columns are missing
             print("Graph generation complete (missing columns).")
             return # Exit if required columns are missing
@@ -596,55 +601,67 @@ def generate_and_save_graphs():
             print("Graph generation complete (empty file).")
             return # Exit if no data
 
-        # --- Data Cleaning and Preparation (Adjust column names to match Excel) ---
-        # Ensure 'Sample Date' is datetime type
-        df_mioty['Sample Date'] = pd.to_datetime(df_mioty['Sample Date'], errors='coerce')
+        # --- Data Cleaning and Preparation ---
+        print("Cleaning and preparing data...")
+        # Ensure 'Sample_Date' is datetime type
+        df_mioty['Sample_Date'] = pd.to_datetime(df_mioty['Sample_Date'], errors='coerce').dt.date # Keep only date part
 
-        # Ensure 'Sample Hour' is treated as a string before converting to time
+        # Ensure 'Sample_Hour' is treated as a string before converting to time
         # Handle potential datetime values in Excel by taking the time part
-        df_mioty['Sample Hour'] = df_mioty['Sample Hour'].apply(lambda x: str(x).split(' ')[-1] if pd.notna(x) else None)
+        df_mioty['Sample_Hour'] = df_mioty['Sample_Hour'].apply(lambda x: str(x).split(' ')[-1] if pd.notna(x) else None)
 
         # Combine date and hour into a single datetime column for time-based plotting
         # Convert time strings to datetime.time objects first for combining
         # Handle potential errors during time parsing
-        df_mioty['Sample Hour_time'] = df_mioty['Sample Hour'].apply(
-            lambda x: datetime.strptime(x, '%H:%M:%S').time() if isinstance(x, str) and ':' in x else (
-                      datetime.strptime(x, '%H:%M').time() if isinstance(x, str) and ':' in x else None)
-            if x is not None else None # Handle None values explicitly
-        )
+        def parse_hour_to_time(hour_str):
+             if isinstance(hour_str, str):
+                 try:
+                     # Try HH:MM:SS first
+                     return datetime.strptime(hour_str, '%H:%M:%S').time()
+                 except ValueError:
+                     try:
+                         # Try HH:MM
+                         return datetime.strptime(hour_str, '%H:%M').time()
+                     except ValueError:
+                         return None # Indicate parsing failed
+             return None # Handle non-string or None input
 
-        # Combine date (from Sample Date) and time (from Sample Hour_time) into a single datetime object
-        # Use a helper function to combine date and time objects
+        df_mioty['Sample_Hour_time'] = df_mioty['Sample_Hour'].apply(parse_hour_to_time)
+
+
+        # Combine date (from Sample_Date) and time (from Sample_Hour_time) into a single datetime object
         def combine_date_time(row):
-            if pd.notna(row['Sample Date']) and pd.notna(row['Sample Hour_time']):
-                # Ensure row['Sample Hour_time'] is a time object
-                if isinstance(row['Sample Hour_time'], time):
-                     return datetime.combine(row['Sample Date'], row['Sample Hour_time'])
+            if pd.notna(row['Sample_Date']) and isinstance(row['Sample_Hour_time'], time):
+                # row['Sample_Date'] is already a date object due to .dt.date above
+                return datetime.combine(row['Sample_Date'], row['Sample_Hour_time'])
             return pd.NaT # Return Not a Time if either is missing or time object is invalid
 
         df_mioty['datetime'] = df_mioty.apply(combine_date_time, axis=1)
 
+        print("Data cleaning and datetime conversion complete.")
 
-        # Drop rows where datetime conversion failed or key columns are missing
-        # Include 'Temperature', 'Luminosity', 'Noise' as they are needed for plots
-        df_mioty.dropna(subset=['datetime', 'Temperature', 'Luminosity', 'Noise', 'Sample Date', 'Sample Hour', 'StudentID'], inplace=True)
+        # Drop rows where datetime conversion failed or key columns for plotting/analysis are missing
+        # Include 'Temperature', 'Luminosity', 'Noise', 'Student_ID' as they are needed for plots/analysis
+        df_mioty.dropna(subset=['datetime', 'Temp(ºc)', 'Light_Level(Lux)', 'Noise_Level(dB)', 'Sample_Date', 'Sample_Hour', 'Student_ID'], inplace=True)
 
+        print(f"DataFrame shape after dropping NaNs: {df_mioty.shape}")
 
         if df_mioty.empty:
-             print("DataFrame is empty after cleaning and creating datetime column.")
-             global_graph_urls = {} # Assign an empty dict if data became empty
-             print("Graph generation complete (data cleaned to empty).")
-             return # Exit if dataframe is empty after cleaning
+            print("DataFrame is empty after cleaning and creating datetime column.")
+            global_graph_urls = {} # Assign an empty dict if data became empty
+            print("Graph generation complete (data cleaned to empty).")
+            return # Exit if dataframe is empty after cleaning
 
         # Sort by datetime for time-series plots
         df_mioty.sort_values('datetime', inplace=True)
-
+        print("DataFrame sorted by datetime.")
 
         # --- Graph 1: Occupancy by Period ---
         try:
             print("Generating Occupancy by Period graph...")
-            # Use HH:MM format for period assignment (from Sample Hour)
-            df_mioty['Hour_HH_MM'] = df_mioty['Sample Hour'].astype(str).str[:5]
+            # Use HH:MM format from the original 'Sample_Hour' column (as string) for period assignment
+            # Ensure it's treated as string before slicing
+            df_mioty['Hour_HH_MM'] = df_mioty['Sample_Hour'].astype(str).str[:5]
 
             # Define the periods with a specific order (Ensure these match your requirements)
             periods = [
@@ -662,10 +679,14 @@ def generate_and_save_graphs():
             def assign_period(hour_hh_mm_str):
                 if not isinstance(hour_hh_mm_str, str):
                     return None # Handle non-string inputs
-                # Check if hour_hh_mm_str falls within the period start and end times
+                 # Check if hour_hh_mm_str falls within the period start and end times (inclusive start, exclusive end usually better for time slots, but matching original logic)
                 for period in periods:
-                    if period['start'] <= hour_hh_mm_str <= period['end']:
+                    # Adjusted comparison to be inclusive of start, exclusive of end, except for the last period end
+                    if period['start'] <= hour_hh_mm_str < period['end']:
                          return period['label']
+                # Special case for the very end of the last period if needed
+                if len(periods) > 0 and hour_hh_mm_str == periods[-1]['end']:
+                     return periods[-1]['label']
                 return None
 
             # Create a new column 'Period'
@@ -677,21 +698,24 @@ def generate_and_save_graphs():
             # Function to check if a value is numeric for StudentID
             def is_numeric(value):
                 try:
-                    # Convert to string before trying to float, handles potential None or other types
+                    # Attempt to convert to float; handles ints, floats, numeric strings
                     float(str(value))
                     return True
                 except (ValueError, TypeError):
                     return False
 
-            # Apply the function to the 'StudentID' column and count the True values (numeric IDs) per period
+            # Apply the function to the 'Student_ID' column and count the True values (numeric IDs) per period
             # Group by 'Period' and sum the boolean results of is_numeric
             # Use .loc to avoid SettingWithCopyWarning if filtering was done before
-            occupancy_by_period_df = df_mioty.loc[df_mioty['Period'].notna()].groupby('Period', observed=False)['StudentID'].apply(lambda x: x.apply(is_numeric).sum()).reset_index(name='numeric_student_id_count')
+            # Ensure to filter for non-null Periods before grouping
+            occupancy_by_period_df = df_mioty.loc[df_mioty['Period'].notna()].groupby('Period', observed=False)['Student_ID'].apply(lambda x: x.apply(is_numeric).sum()).reset_index(name='numeric_student_id_count')
+
+            print(f"Occupancy data for plotting: {occupancy_by_period_df}")
 
 
             # Create a plot
             plt.figure(figsize=(12, 6))
-            plt.bar(occupancy_by_period_df['Period'], occupancy_by_period_df['numeric_student_id_count'], color='skyblue') # Added color
+            plt.bar(occupancy_by_period_df['Period'], occupancy_by_period_df['numeric_student_id_count'], color='#ff0404')
             plt.xlabel('Period')
             plt.ylabel('Number of Numeric Student IDs')
             plt.title('Number of Numeric Student IDs by Period')
@@ -711,22 +735,23 @@ def generate_and_save_graphs():
         try:
             print("Generating Temperature on 1-May-2025 graph...")
             target_date_str = '2025-05-01'
-            # Filter DataFrame for the target date
-            # Ensure comparison is between date objects
+            # Ensure comparison is between date objects (Sample_Date is already date objects or NaT)
             target_date_obj = datetime.strptime(target_date_str, '%Y-%m-%d').date()
-            # Use .loc for label-based indexing and .copy() to avoid SettingWithCopyWarning
-            filtered_df_temp1 = df_mioty.loc[df_mioty['Sample Date'].apply(lambda x: x == target_date_obj if pd.notna(x) else False)].copy()
-
+            # Filter DataFrame for the target date using .loc and .copy()
+            filtered_df_temp1 = df_mioty.loc[df_mioty['Sample_Date'] == target_date_obj].copy()
 
             if not filtered_df_temp1.empty:
-                # Use the existing 'datetime' column for plotting
-                filtered_df_temp1.dropna(subset=['datetime', 'Temperature'], inplace=True) # Drop rows with missing datetime or temperature
+                # Drop rows with missing datetime or temperature BEFORE plotting
+                filtered_df_temp1.dropna(subset=['datetime', 'Temp(ºc)'], inplace=True)
 
                 if not filtered_df_temp1.empty:
-                     # Sort by datetime again after filtering
+                    # Sort by datetime again after filtering
                     filtered_df_temp1.sort_values('datetime', inplace=True)
 
                     # Define time frames (can reuse or redefine if needed)
+                    # Note: These time frames are used for *labeling* the plot segments,
+                    # the plot itself shows the data points according to their exact 'datetime'.
+                    # The original connection logic plots lines *between* these frames.
                     time_frames = [
                         {'start': '09:00', 'end': '10:30', 'label': '09:00-10:30'},
                         {'start': '10:30', 'end': '12:00', 'label': '10:30-12:00'},
@@ -743,40 +768,37 @@ def generate_and_save_graphs():
                     previous_end_time = None
                     previous_color = None
 
+                    # Filter and plot data for each defined time frame
                     for i, frame in enumerate(time_frames):
-                        # Create time objects from start/end strings for comparison
                         start_time_obj = datetime.strptime(frame['start'], '%H:%M').time()
                         end_time_obj = datetime.strptime(frame['end'], '%H:%M').time()
 
                         # Filter DataFrame based on the time part of the 'datetime' column
-                        # Use .loc for label-based indexing and .copy() to avoid SettingWithCopyWarning
                         frame_df = filtered_df_temp1.loc[
                             (filtered_df_temp1['datetime'].dt.time >= start_time_obj) &
                             (filtered_df_temp1['datetime'].dt.time < end_time_obj)
-                        ].copy()
-
+                        ].copy() # Use .copy() to avoid SettingWithCopyWarning
 
                         if not frame_df.empty:
-                            color = f'C{i}' # Use default matplotlib colors
-                            plt.plot(frame_df['datetime'], frame_df['Temperature'], marker='o', linestyle='-', color=color, label=frame['label'])
+                            color = f'C{i}' # Use default matplotlib colors C0, C1, etc.
+                            plt.plot(frame_df['datetime'], frame_df['Temp(ºc)'], marker='o', linestyle='-', color=color, label=frame['label'])
 
                             # Connect the last point of the previous time frame with the first point of the current time frame
                             if previous_end_time is not None and not frame_df.empty:
                                 # Ensure the connection point exists in the previous and current frames
                                 plt.plot([previous_end_time, frame_df['datetime'].iloc[0]],
-                                         [previous_end_temp, frame_df['Temperature'].iloc[0]],
-                                         linestyle='-', color=previous_color, alpha=0.7) # Added alpha for visibility
-
+                                         [previous_end_temp, frame_df['Temp(ºc)'].iloc[0]],
+                                         linestyle='-', color=previous_color, alpha=0.7)
 
                             # Update previous end points for the next iteration
-                            previous_end_temp = frame_df['Temperature'].iloc[-1]
+                            previous_end_temp = frame_df['Temp(ºc)'].iloc[-1]
                             previous_end_time = frame_df['datetime'].iloc[-1]
                             previous_color = color
                         else:
-                             # If a frame is empty, reset previous end points so no line is drawn to/from it
-                             previous_end_temp = None
-                             previous_end_time = None
-                             previous_color = None
+                            # If a frame is empty, reset previous end points so no line is drawn to/from it
+                            previous_end_temp = None
+                            previous_end_time = None
+                            previous_color = None
 
 
                     plt.title(f'Temperature on {target_date_str} by Time Frame')
@@ -796,8 +818,8 @@ def generate_and_save_graphs():
                     graph_urls['temperature_may1_2025'] = None
 
             else:
-                 graph_urls['temperature_may1_2025'] = None # Indicate no data for this graph
-                 print(f"No data for {target_date_str} to generate temperature graph.")
+                graph_urls['temperature_may1_2025'] = None # Indicate no data for this graph
+                print(f"No data for {target_date_str} to generate temperature graph.")
 
         except Exception as e:
             print(f"Error generating Temperature on 1-May-2025 graph: {e}")
@@ -810,10 +832,10 @@ def generate_and_save_graphs():
             target_date_str = '2025-05-05'
             target_date_obj = datetime.strptime(target_date_str, '%Y-%m-%d').date()
             # Use .loc for label-based indexing and .copy() to avoid SettingWithCopyWarning
-            filtered_df_temp5 = df_mioty.loc[df_mioty['Sample Date'].apply(lambda x: x == target_date_obj if pd.notna(x) else False)].copy()
+            filtered_df_temp5 = df_mioty.loc[df_mioty['Sample_Date'] == target_date_obj].copy()
 
             if not filtered_df_temp5.empty:
-                filtered_df_temp5.dropna(subset=['datetime', 'Temperature'], inplace=True)
+                filtered_df_temp5.dropna(subset=['datetime', 'Temp(ºc)'], inplace=True)
 
                 if not filtered_df_temp5.empty:
                     filtered_df_temp5.sort_values('datetime', inplace=True)
@@ -846,20 +868,20 @@ def generate_and_save_graphs():
 
                         if not frame_df.empty:
                             color = f'C{i}'
-                            plt.plot(frame_df['datetime'], frame_df['Temperature'], marker='o', linestyle='-', color=color, label=frame['label'])
+                            plt.plot(frame_df['datetime'], frame_df['Temp(ºc)'], marker='o', linestyle='-', color=color, label=frame['label'])
 
                             if previous_end_time is not None and not frame_df.empty:
                                 plt.plot([previous_end_time, frame_df['datetime'].iloc[0]],
-                                         [previous_end_temp, frame_df['Temperature'].iloc[0]],
+                                         [previous_end_temp, frame_df['Temp(ºc)'].iloc[0]],
                                          linestyle='-', color=previous_color, alpha=0.7)
 
-                            previous_end_temp = frame_df['Temperature'].iloc[-1]
+                            previous_end_temp = frame_df['Temp(ºc)'].iloc[-1]
                             previous_end_time = frame_df['datetime'].iloc[-1]
                             previous_color = color
                         else:
-                             previous_end_temp = None
-                             previous_end_time = None
-                             previous_color = None
+                            previous_end_temp = None
+                            previous_end_time = None
+                            previous_color = None
 
 
                     plt.title(f'Temperature on {target_date_str} by Time Frame')
@@ -892,11 +914,10 @@ def generate_and_save_graphs():
             target_date_str = '2025-05-09'
             target_date_obj = datetime.strptime(target_date_str, '%Y-%m-%d').date()
             # Use .loc for label-based indexing and .copy() to avoid SettingWithCopyWarning
-            filtered_df_lumi = df_mioty.loc[df_mioty['Sample Date'].apply(lambda x: x == target_date_obj if pd.notna(x) else False)].copy()
-
+            filtered_df_lumi = df_mioty.loc[df_mioty['Sample_Date'] == target_date_obj].copy()
 
             if not filtered_df_lumi.empty:
-                filtered_df_lumi.dropna(subset=['datetime', 'Luminosity'], inplace=True)
+                filtered_df_lumi.dropna(subset=['datetime', 'Light_Level(Lux)'], inplace=True)
 
                 if not filtered_df_lumi.empty:
                     filtered_df_lumi.sort_values('datetime', inplace=True)
@@ -917,7 +938,6 @@ def generate_and_save_graphs():
                     previous_end_time = None
                     previous_color = None
 
-
                     for i, frame in enumerate(time_frames):
                         start_time_obj = datetime.strptime(frame['start'], '%H:%M').time()
                         end_time_obj = datetime.strptime(frame['end'], '%H:%M').time()
@@ -928,29 +948,29 @@ def generate_and_save_graphs():
                             (filtered_df_lumi['datetime'].dt.time < end_time_obj)
                         ].copy()
 
-
                         if not frame_df.empty:
-                             # Apply the 0/1 conversion to 'Luminosity'
-                             # Ensure 'Luminosity' is numeric and handle None before comparison
-                             frame_df.loc[:, 'Luminosity_Binary'] = frame_df['Luminosity'].apply(lambda x: 1 if pd.notna(x) and x > 100 else 0) # Use 1/0 for plotting
+                            # Apply the 0/1 conversion to 'Light_Level(Lux)'
+                            # Ensure 'Light_Level(Lux)' is numeric and handle None before comparison
+                            # Use .loc[] for assignment to avoid SettingWithCopyWarning
+                            frame_df.loc[:, 'Luminosity_Binary'] = frame_df['Light_Level(Lux)'].apply(lambda x: 1 if pd.notna(x) and pd.is_numeric(x) and x > 100 else 0) # Use 1/0 for plotting
 
-                             color = f'C{i}'
-                             plt.plot(frame_df['datetime'], frame_df['Luminosity_Binary'], linestyle='-', color=color, label=frame['label']) # Removed marker='o'
+                            color = f'C{i}'
+                            # Removed marker='o' for a step-like binary plot
+                            plt.plot(frame_df['datetime'], frame_df['Luminosity_Binary'], linestyle='-', color=color, label=frame['label'])
 
-                             if previous_end_time is not None and not frame_df.empty:
-                                 plt.plot([previous_end_time, frame_df['datetime'].iloc[0]],
-                                          [previous_end_luminosity, frame_df['Luminosity_Binary'].iloc[0]],
-                                           linestyle='-', color=previous_color, alpha=0.7)
+                            if previous_end_time is not None and not frame_df.empty:
+                                # Connect the last point of the previous frame to the first of the current
+                                plt.plot([previous_end_time, frame_df['datetime'].iloc[0]],
+                                         [previous_end_luminosity, frame_df['Luminosity_Binary'].iloc[0]],
+                                         linestyle='-', color=previous_color, alpha=0.7)
 
-
-                             previous_end_luminosity = frame_df['Luminosity_Binary'].iloc[-1]
-                             previous_end_time = frame_df['datetime'].iloc[-1]
-                             previous_color = color
+                            previous_end_luminosity = frame_df['Luminosity_Binary'].iloc[-1]
+                            previous_end_time = frame_df['datetime'].iloc[-1]
+                            previous_color = color
                         else:
-                             previous_end_luminosity = None
-                             previous_end_time = None
-                             previous_color = None
-
+                            previous_end_luminosity = None
+                            previous_end_time = None
+                            previous_color = None
 
                     plt.title(f'Luminosity on {target_date_str} by Time Frame (On/Off)')
                     plt.xlabel('Time of Day')
@@ -965,8 +985,8 @@ def generate_and_save_graphs():
                     graph_urls['luminosity_may9_2025'] = url_for('static', filename='graphs/luminosity_may9_2025.png')
                     print("Luminosity on 9-May-2025 graph generated.")
                 else:
-                    print(f"No valid data for {target_date_str} after dropping missing values.")
-                    graph_urls['luminosity_may9_2025'] = None
+                     print(f"No valid data for {target_date_str} after dropping missing values.")
+                     graph_urls['luminosity_may9_2025'] = None
 
 
             else:
@@ -984,11 +1004,10 @@ def generate_and_save_graphs():
             target_date_str = '2025-05-01'
             target_date_obj = datetime.strptime(target_date_str, '%Y-%m-%d').date()
             # Use .loc for label-based indexing and .copy() to avoid SettingWithCopyWarning
-            filtered_df_noise = df_mioty.loc[df_mioty['Sample Date'].apply(lambda x: x == target_date_obj if pd.notna(x) else False)].copy()
-
+            filtered_df_noise = df_mioty.loc[df_mioty['Sample_Date'] == target_date_obj].copy()
 
             if not filtered_df_noise.empty:
-                filtered_df_noise.dropna(subset=['datetime', 'Noise'], inplace=True)
+                filtered_df_noise.dropna(subset=['datetime', 'Noise_Level(dB)'], inplace=True) # Corrected column name
 
                 if not filtered_df_noise.empty:
                     filtered_df_noise.sort_values('datetime', inplace=True)
@@ -1022,20 +1041,23 @@ def generate_and_save_graphs():
 
                         if not frame_df.empty:
                             color = f'C{i}'
-                            plt.plot(frame_df['datetime'], frame_df['Noise'], marker='o', linestyle='-', color=color, label=frame['label'])
+                            # Corrected column name for plotting noise
+                            plt.plot(frame_df['datetime'], frame_df['Noise_Level(dB)'], marker='o', linestyle='-', color=color, label=frame['label'])
 
                             if previous_end_time is not None and not frame_df.empty:
+                                # Corrected column name for connecting lines
                                 plt.plot([previous_end_time, frame_df['datetime'].iloc[0]],
-                                         [previous_end_noise, frame_df['Noise'].iloc[0]],
+                                         [previous_end_noise, frame_df['Noise_Level(dB)'].iloc[0]],
                                          linestyle='-', color=previous_color, alpha=0.7)
 
-                            previous_end_noise = frame_df['Noise'].iloc[-1]
+                            # Corrected column name for updating previous end point
+                            previous_end_noise = frame_df['Noise_Level(dB)'].iloc[-1]
                             previous_end_time = frame_df['datetime'].iloc[-1]
                             previous_color = color
                         else:
-                             previous_end_noise = None
-                             previous_end_time = None
-                             previous_color = None
+                            previous_end_noise = None
+                            previous_end_time = None
+                            previous_color = None
 
 
                     plt.title(f'Noise on {target_date_str} by Time Frame')
@@ -1062,39 +1084,41 @@ def generate_and_save_graphs():
             graph_urls['noise_may1_2025'] = None
 
 
-        # --- Graph 6: Average Environmental Factors on 1-May-2025 by Hour ---
-        # Note: The notebook code provided only had 5 graphs, but the description mentioned 6.
-        # I will implement the 5th graph from the notebook code which is Average Environmental Factors.
+        # --- Graph 6 (Note: The notebook code provided seemed to map to 5, matching the description. This is the 5th from code) ---
+        # Graph 5: Average Environmental Factors on 1-May-2025 by Hour
         try:
             print("Generating Average Environmental Factors graph...")
-            target_date_str = '2025-05-01'
+            target_date_str = '2025-05-01' # This graph was for 1-May in the original snippet
             target_date_obj = datetime.strptime(target_date_str, '%Y-%m-%d').date()
             # Use .loc for label-based indexing and .copy() to avoid SettingWithCopyWarning
-            filtered_df_avg = df_mioty.loc[df_mioty['Sample Date'].apply(lambda x: x == target_date_obj if pd.notna(x) else False)].copy()
+            filtered_df_avg = df_mioty.loc[df_mioty['Sample_Date'] == target_date_obj].copy()
 
             if not filtered_df_avg.empty:
-                filtered_df_avg.dropna(subset=['datetime', 'Temperature', 'Noise'], inplace=True)
+                 # Drop rows with missing datetime or the required metric columns
+                filtered_df_avg.dropna(subset=['datetime', 'Temp(ºc)', 'Noise_Level(dB)'], inplace=True) # Corrected column names
 
                 if not filtered_df_avg.empty:
-                    filtered_df_avg['Sample Hour_hour'] = filtered_df_avg['datetime'].dt.hour
+                    # Extract hour from the datetime
+                    filtered_df_avg['Sample_Hour_hour'] = filtered_df_avg['datetime'].dt.hour
 
-                    # Group by 'Sample Hour_hour' and calculate the mean for 'Temperature' and 'Noise'
-                    average_df = filtered_df_avg.groupby('Sample Hour_hour')[['Temperature', 'Noise']].mean().reset_index()
+                    # Group by 'Sample_Hour_hour' and calculate the mean for temperature and noise
+                    # Corrected column names for grouping
+                    average_df = filtered_df_avg.groupby('Sample_Hour_hour')[['Temp(ºc)', 'Noise_Level(dB)']].mean().reset_index()
 
                     plt.figure(figsize=(12, 6))
 
-                    # Plot average temperature
-                    plt.plot(average_df['Sample Hour_hour'], average_df['Temperature'], marker='o', linestyle='-', color='r', label='Temperature')
+                    # Plot average temperature - Corrected column name
+                    plt.plot(average_df['Sample_Hour_hour'], average_df['Temp(ºc)'], marker='o', linestyle='-', color='r', label='Temperature')
 
-                    # Plot average noise
-                    plt.plot(average_df['Sample Hour_hour'], average_df['Noise'], marker='o', linestyle='-', color='b', label='Noise')
+                    # Plot average noise - Corrected column name
+                    plt.plot(average_df['Sample_Hour_hour'], average_df['Noise_Level(dB)'], marker='o', linestyle='-', color='b', label='Noise')
 
                     plt.title(f'Average Environmental Factors on {target_date_str} by Hour')
                     plt.xlabel('Hour of Day')
-                    plt.ylabel('Average Value')
+                    plt.ylabel('Average Value') # Keep generic as it plots two different metrics
                     plt.grid(True)
                     plt.legend()
-                    plt.xticks(average_df['Sample Hour_hour']) # Ensure all hours are displayed
+                    plt.xticks(average_df['Sample_Hour_hour']) # Ensure all hours with data are displayed
                     plt.tight_layout()
                     graph_path = os.path.join(graph_dir, 'average_environmental_factors.png')
                     plt.savefig(graph_path)
@@ -1106,8 +1130,8 @@ def generate_and_save_graphs():
                     graph_urls['average_environmental_factors'] = None
 
             else:
-                 graph_urls['average_environmental_factors'] = None # Indicate no data for this graph
-                 print(f"No data for {target_date_str} to generate average environmental factors graph.")
+                graph_urls['average_environmental_factors'] = None # Indicate no data for this graph
+                print(f"No data for {target_date_str} to generate average environmental factors graph.")
 
         except Exception as e:
             print(f"Error generating Average Environmental Factors graph: {e}")
@@ -1130,9 +1154,6 @@ def generate_and_save_graphs():
     global_graph_urls = graph_urls
     print("Graph generation complete.")
 
-    # The function does not return graph_urls anymore, it updates the global variable
-
-
 # ========== ADMIN ROUTES ==========
 @app.route('/admin/refresh_graphs', methods=['POST']) # Use POST for actions
 @login_required
@@ -1140,7 +1161,7 @@ def generate_and_save_graphs():
 def refresh_graphs():
     """Regenerates graphs and redirects back to the admin dashboard."""
     generate_and_save_graphs()
-    flash('Graphs refreshed successfully!', 'success') # Optional: add a flash message
+    #flash('Graphs refreshed successfully!', 'success') # Optional: add a flash message
     return redirect(url_for('admin_dashboard'))
 
 
@@ -1516,7 +1537,7 @@ def load_data_from_excel():
                     # Attempt to convert to integer, handle potential errors
                     try:
                         processed_student_id = int(student_id_value)
-                        print(f"{processed_student_id}")
+                        
                     except (ValueError, TypeError):
                         # If conversion fails (e.g., unexpected non-numeric string), treat as None
                         print(f"Warning: Could not convert StudentID value '{student_id_value}' to integer in row {index}. Setting to None.")
@@ -1583,10 +1604,11 @@ if __name__ == '__main__':
         print(f"Created instance folder: {app.instance_path}")
 
     create_tables() # This will now drop and recreate mioty_data
-    load_data_from_excel()
-    generate_and_save_graphs() # Load data into the (newly created) mioty_data table
+    
 
     # Iniciar aplicación Flask
     with app.app_context():
+        load_data_from_excel()
+        generate_and_save_graphs() # Load data into the (newly created) mioty_data table
         app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
 

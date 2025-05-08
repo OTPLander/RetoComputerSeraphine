@@ -39,6 +39,8 @@
         <div class="header-container">
             <img src="{{ url_for('static', filename='images/tecnun-logo.png') }}" alt="Tecnun Logo" class="logo">
             <h1>Admin Dashboard</h1>
+            {# Add a link styled as a button to navigate to the index page #}
+            <a href="{{ url_for('index') }}" class="button small">Back to Rooms</a>
         </div>
     </header>
 
@@ -70,7 +72,7 @@
                                 <td class="actions">
                                     <a href="{{ url_for('edit_user', user_id=user.id) }}" class="button small">Edit</a>
                                     <form action="{{ url_for('delete_user', user_id=user.id) }}" method="POST" style="display: inline-block;">
-                                        <button type="submit" class="button small danger" onclick="return confirm('Are you sure you want to delete this user?');">Delete</button>
+                                        <button type="submit" class="button small" onclick="return confirm('Are you sure you want to delete this user?');">Delete</button>
                                     </form>
                                 </td>
                             </tr>
@@ -86,7 +88,7 @@
         <section class="white-section">
             <div class="content-wrapper">
                 <h2>Reservation Management</h2>
-                 <a href="{{ url_for('my_reservations') }}" class="button">Add New Reservation</a>
+
                 <div class="admin-table-container">
                     <table class="admin-table">
                         <thead>
@@ -108,8 +110,8 @@
                                 <td>{{ reservation.start_time.strftime('%Y-%m-%d %H:%M') }}</td> {# Format datetime #}
                                 <td>{{ reservation.end_time.strftime('%Y-%m-%d %H:%M') }}</td>   {# Format datetime #}
                                 <td class="actions">
-                                    <a href="{{ url_for('edit_reservation', reservation_id=reservation.id) }}" class="button small">Edit</a>
-                                    <form action="{{ url_for('delete_reservation', reservation_id=reservation.id) }}" method="POST" style="display: inline-block;">
+                                    
+                                    <form action="{{ url_for('cancel_reservation', reservation_id=reservation.id) }}" method="POST" style="display: inline-block;">
                                         <button type="submit" class="button small danger" onclick="return confirm('Are you sure you want to delete this reservation?');">Delete</button>
                                     </form>
                                 </td>
@@ -126,7 +128,7 @@
         <section class="white-section">
             <div class="content-wrapper">
                 <h2>Mioty Data from Excel</h2> {# Updated title #}
-                 
+
 
                 <div class="admin-table-container">
                     <table class="admin-table">
@@ -139,7 +141,7 @@
                                 <th>Temperature (°C)</th>
                                 <th>Luminosity (Lux)</th>
                                 <th>Noise (dB)</th>
-                                <th>Actions</th> {# Added Actions column for delete #}
+                                
                             </tr>
                         </thead>
                         <tbody>
@@ -154,7 +156,7 @@
                                 <td>{{ "%.2f"|format(data_entry.temperature) if data_entry.temperature is not none else 'N/A' }}</td>
                                 <td>{{ "%.2f"|format(data_entry.luminosity) if data_entry.luminosity is not none else 'N/A' }}</td>
                                 <td>{{ "%.2f"|format(data_entry.noise) if data_entry.noise is not none else 'N/A' }}</td>
-                                
+
                                 </td>
                             </tr>
                             {% endfor %}
@@ -171,11 +173,11 @@
                 {# Pagination Controls for Mioty Data #}
                 <div class="pagination" style="text-align: center; margin-top: 20px;">
                     {% if mioty_data_pagination.has_prev %}
-                        <a href="{{ url_for('admin_dashboard', mioty_page=mioty_data_pagination.prev_num) }}">Previous</a>
+                    <a href="{{ url_for('admin_dashboard', mioty_page=mioty_data_pagination.prev_num) }}">Previous</a>
                     {% endif %}
                     <span>Page {{ mioty_data_pagination.page }} of {{ mioty_data_pagination.pages }}</span>
                     {% if mioty_data_pagination.has_next %}
-                        <a href="{{ url_for('admin_dashboard', mioty_page=mioty_data_pagination.next_num) }}">Next</a>
+                    <a href="{{ url_for('admin_dashboard', mioty_page=mioty_data_pagination.next_num) }}">Next</a>
                     {% endif %}
                 </div>
 
@@ -183,57 +185,103 @@
         </section>
 
         {# Section for Graphs #}
-                <div class="graphs-container" style="margin-top: 30px; text-align: center;">
-                    <h2>Data Visualizations</h2>
-                    {# Form for the Refresh Graphs button #}
-            <form action="{{ url_for('refresh_graphs') }}" method="post" class="refresh-graphs-form">
-                <button type="submit">Refresh Graphs</button>
-            </form>
+        <section class="white-section">
+            <div class="content-wrapper">
+                {# Title for the section - placed outside the flex container for alignment #}
+                <h2>Data Visualizations</h2>
 
+                {# Container using flexbox to lay out the button and the graph area #}
+                <div class="graphs-section-layout">
+                    {# Container specifically for the refresh button - ensures it stays to the left #}
+                    <div class="refresh-button-container">
+                        {# Form for the Refresh Graphs button - using the existing 'button' class #}
+                        <form action="{{ url_for('refresh_graphs') }}" method="post" class="refresh-graphs-form">
+                            <button type="submit" class="button">Refresh Graphs</button>
+                        </form>
+                    </div>
+
+                    {# The main area displaying the graphs and navigation #}
                     <div class="graph-viewer">
+                        {# graph-items container is used by JS to hold images #}
                         <div class="graph-items">
-                            {# Wrap each graph in a div with a class like 'graph-item' #}
-                            {% if graph_urls and graph_urls.temperature_by_date %}
-                                <div class="graph-item">
-                                    <img src="{{ graph_urls.temperature_by_date }}" alt="Temperature Plot" style="max-width: 100%; height: auto; display: none;"> {# Initially hide all graphs #}
-                                </div>
-                            {% endif %}
-
-                            {% if graph_urls and graph_urls.luminosity_by_date %}
-                                <div class="graph-item">
-                                     <img src="{{ graph_urls.luminosity_by_date }}" alt="Luminosity Plot" style="max-width: 100%; height: auto; display: none;">
-                                </div>
-                            {% endif %}
-
-                            {% if graph_urls and graph_urls.noise_by_date %}
-                                <div class="graph-item">
-                                     <img src="{{ graph_urls.noise_by_date }}" alt="Noise Plot" style="max-width: 100%; height: auto; display: none;">
-                                </div>
-                            {% endif %}
-
+                            {# Graph blocks remain the same - ensure these use the correct keys #}
+                            {# Occupancy by Period Graph #}
                             {% if graph_urls and graph_urls.occupancy_by_period %}
-                                <div class="graph-item">
-                                     <img src="{{ graph_urls.occupancy_by_period }}" alt="Occupancy by Period Plot" style="max-width: 100%; height: auto; display: none;">
-                                </div>
+                            <div class="graph-item">
+                                <img src="{{ graph_urls.occupancy_by_period }}" alt="Occupancy by Period Plot">
+                            </div>
                             {% endif %}
 
-                            {# Add containers for other graphs similarly #}
+                            {# Temperature on 1-May-2025 Graph #}
+                            {% if graph_urls and graph_urls.temperature_may1_2025 %}
+                            <div class="graph-item">
+                                <img src="{{ graph_urls.temperature_may1_2025 }}" alt="Temperature on 1-May-2025 Plot">
+                            </div>
+                            {% endif %}
 
-                             {% if not graph_urls or graph_urls.values()|select('none')|list|length == graph_urls|length %}
-                                <p>Could not generate any graphs (no Mioty data or errors).</p>
+                            {# Temperature on 5-May-2025 Graph #}
+                            {% if graph_urls and graph_urls.temperature_may5_2025 %}
+                            <div class="graph-item">
+                                <img src="{{ graph_urls.temperature_may5_2025 }}" alt="Temperature on 5-May-2025 Plot">
+                            </div>
+                            {% endif %}
+
+                            {# Luminosity on 9-May-2025 Graph #}
+                            {% if graph_urls and graph_urls.luminosity_may9_2025 %}
+                            <div class="graph-item">
+                                <img src="{{ graph_urls.luminosity_may9_2025 }}" alt="Luminosity on 9-May-2025 Plot">
+                            </div>
+                            {% endif %}
+
+                            {# Noise on 1-May-2025 Graph #}
+                            {% if graph_urls and graph_urls.noise_may1_2025 %}
+                            <div class="graph-item">
+                                <img src="{{ graph_urls.noise_may1_2025 }}" alt="Noise on 1-May-2025 Plot">
+                            </div>
+                            {% endif %}
+
+                            {# Average Environmental Factors Graph #}
+                            {% if graph_urls and graph_urls.average_environmental_factors %}
+                            <div class="graph-item">
+                                <img src="{{ graph_urls.average_environmental_factors }}" alt="Average Environmental Factors Plot">
+                            </div>
+                            {% endif %}
+
+                            {# Fallback message if no graphs were successfully generated #}
+                            {% set generated_graph_count = (
+                            (graph_urls.occupancy_by_period is not none) +
+                            (graph_urls.temperature_may1_2025 is not none) +
+                            (graph_urls.temperature_may5_2025 is not none) +
+                            (graph_urls.luminosity_may9_2025 is not none) +
+                            (graph_urls.noise_may1_2025 is not none) +
+                            (graph_urls.average_environmental_factors is not none)
+                            ) %}
+                            {% if generated_graph_count == 0 %}
+                            <p class="graph-message">Could not generate any graphs (check server logs for errors).</p> {# Added class #}
                             {% endif %}
                         </div>
 
                         {# Navigation Buttons #}
-                        <div class="graph-navigation" style="margin-top: 15px;">
-                            <button id="prevGraphBtn">Previous</button>
-                            <span id="graphCounter"></span> {# To display "Graph X of Y" #}
-                            <button id="nextGraphBtn">Next</button>
+                        {# Show navigation only if there are graphs to display #}
+                        {% if generated_graph_count > 1 %}
+                        <div class="graph-navigation">
+                            {# Removed inline style #}
+                            <button id="prevGraphBtn" class="button small">Previous</button>
+                            <span id="graphCounter"></span>
+                            <button id="nextGraphBtn" class="button small">Next</button>
                         </div>
-                    </div>
+                        {% endif %}
 
-                </div>
-                {# End Section for Graphs #}
+                        {# Message if only one graph exists, so navigation is hidden #}
+                        {% if generated_graph_count == 1 %}
+                        <p class="graph-message">(Only one graph available)</p> {# Added class and removed inline style #}
+                        {% endif %}
+
+                    </div> {# End graph-viewer #}
+                </div> {# End graphs-section-layout #}
+            </div>
+        </section>
+        {# End Section for Graphs #}
 
 
     </main>
