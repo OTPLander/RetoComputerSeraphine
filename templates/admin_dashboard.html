@@ -9,6 +9,12 @@
     <style>
         /* Add any specific styles for the new table here if needed,
            but try to reuse existing .admin-table styles */
+        /* Optional: Add some styling for the raw data cell to prevent it from stretching the table too much */
+        .raw-data-cell { /* Keeping the class name but it might not be needed if raw_data is removed */
+            max-width: 200px; /* Adjust as needed */
+            overflow-x: auto; /* Add horizontal scroll if content overflows */
+            word-break: break-all; /* Break long words */
+        }
     </style>
 </head>
 <body>
@@ -79,7 +85,7 @@
                     <table class="admin-table">
                         <thead>
                             <tr>
-                                <th>ID</th>
+                                <th>Reservation ID</th> {# Changed from ID to clarify #}
                                 <th>User</th>
                                 <th>Classroom</th>
                                 <th>Start Time</th>
@@ -93,7 +99,8 @@
                         <tbody>
                             {% for reservation in reservations %}
                             <tr>
-                                <td>{{ reservation.access_code_rel.code }}</td>
+                                {# Display the reservation ID #}
+                                <td>{{ reservation.id }}</td>
                                 {# Access the username via the user relationship #}
                                 <td>{{ reservation.user.username }}</td>
                                 {# Access the classroom name via the classroom relationship #}
@@ -116,40 +123,42 @@
             </div>
         </section>
 
-        {# NEW SECTION FOR MIOTY MESSAGES #}
+        {# SECTION FOR MIOTY DATA FROM EXCEL #}
         <section class="white-section">
             <div class="content-wrapper">
-                <h2>Mioty Messages</h2>
+                <h2>Mioty Data from Excel</h2> {# Updated title #}
 
                 <div class="admin-table-container">
                     <table class="admin-table">
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Timestamp</th>
-                                <th>Key Value</th>
-                                <th>Noise</th>
+                                {# Updated headers to match MiotyData model #}
+                                <th>Sample Date</th>
+                                <th>Sample Hour</th>
+                                <th>Student ID</th>
                                 <th>Temperature (°C)</th>
-                                <th>Luminosity</th>
-                                <th>Raw Data</th>
+                                <th>Luminosity (Lux)</th>
+                                <th>Noise (dB)</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% if messages %} {# Check if messages list is not empty #}
-                            {% for message in messages %}
+                            {% if messages %} {# 'messages' variable contains MiotyData objects #}
+                            {% for data_entry in messages %} {# Renamed loop variable for clarity #}
                             <tr>
-                                <td>{{ message.id }}</td>
-                                <td>{{ message.timestamp.strftime('%Y-%m-%d %H:%M:%S') if message.timestamp else 'N/A' }}</td> {# Format timestamp #}
-                                <td>{{ message.key_value if message.key_value is not none else 'N/A' }}</td> {# Handle None values #}
-                                <td>{{ message.noise if message.noise is not none else 'N/A' }}</td> {# Handle None values #}
-                                <td>{{ "%.2f"|format(message.temperature) if message.temperature is not none else 'N/A' }}</td> {# Format temperature and handle None #}
-                                <td>{{ message.luminosity if message.luminosity is not none else 'N/A' }}</td> {# Handle None values #}
-                                <td class="raw-data-cell">{{ message.raw_data if message.raw_data is not none else 'N/A' }}</td> {# Handle None values #}
+                                {# Accessing attributes from MiotyData object #}
+                                <td>{{ data_entry.sample_date if data_entry.sample_date is not none else 'N/A' }}</td>
+                                <td>{{ data_entry.sample_hour if data_entry.sample_hour is not none else 'N/A' }}</td>
+                                <td>{{ data_entry.student_id if data_entry.student_id is not none else 'N/A' }}</td>
+                                {# Formatting float values to 2 decimal places #}
+                                <td>{{ "%.2f"|format(data_entry.temperature) if data_entry.temperature is not none else 'N/A' }}</td>
+                                <td>{{ "%.2f"|format(data_entry.luminosity) if data_entry.luminosity is not none else 'N/A' }}</td>
+                                <td>{{ "%.2f"|format(data_entry.noise) if data_entry.noise is not none else 'N/A' }}</td>
                             </tr>
                             {% endfor %}
-                            {% else %} {# Display message if no messages are available #}
+                            {% else %} {# Display message if no data is available #}
                             <tr>
-                                <td colspan="7" style="text-align: center;">No Mioty messages found in the database.</td>
+                                {# Updated colspan to match the new number of columns (6) #}
+                                <td colspan="6" style="text-align: center;">No Mioty data found in the database.</td>
                             </tr>
                             {% endif %}
                         </tbody>
@@ -168,6 +177,7 @@
 
     <style>
         /* Optional: Add some styling for the raw data cell to prevent it from stretching the table too much */
+        /* This style might not be necessary anymore if raw_data is removed */
         .raw-data-cell {
             max-width: 200px; /* Adjust as needed */
             overflow-x: auto; /* Add horizontal scroll if content overflows */

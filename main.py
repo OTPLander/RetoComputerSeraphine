@@ -10,69 +10,19 @@ import random # Import random for code generation
 import smtplib
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
-import threading
-import paho.mqtt.client as mqtt
-import json
-import struct
-
-
-
-
-def run_mqtt_client():
-    brokerMioty = "192.168.10.153"
-    portMioty = 1883
-    topicMioty = 'mioty/00-00-00-00-00-00-00-00/70-b3-d5-67-70-11-01-98/uplink'
-
-    def on_connect(client, userdata, flags, rc):
-        if rc == 0:
-            print("✅ Conectado al broker MQTT")
-            client.subscribe(topicMioty)
-        else:
-            print("❌ Error al conectar MQTT, código:", rc)
-
-    def on_message(client, userdata, msg):
-        print("\n📥 Mensaje MQTT recibido:")
-        try:
-            js = json.loads(msg.payload.decode("utf-8"))
-            data = js.get("data", [])
-            byte_data = bytes(data[:7])
-            key, noise, temperature, luminosity = struct.unpack('<BHHH', byte_data)
-            
-            print(f"🎹 Tecla: {chr(key) if 32 <= key <= 126 else key}")
-            print(f"🎧 Ruido: {noise}")
-            print(f"🌡️ Temperatura: {temperature / 100:.2f}°C")
-            print(f"💡 Luminosidad: {luminosity}")
-
-            with app.app_context(): # Crea un contexto de aplicación para operaciones de DB
-                new_mioty_data = MiotyData(
-                    key_code=key,
-                    noise=noise,
-                    temperature=temperature, # Guarda el valor ya convertido a float
-                    luminosity=luminosity,
-                    timestamp=datetime.utcnow() # Guarda el timestamp actual
-                )
-                db.session.add(new_mioty_data) # Añade el nuevo objeto a la sesión
-                db.session.commit() # Guarda los cambios en la base de datos
-                print("✅ Datos MQTT guardados en la base de datos.")
-
-        except Exception as e:
-            print("❌ Error procesando mensaje MQTT:", e)
-
-    client = mqtt.Client()
-    client.on_connect = on_connect
-    client.on_message = on_message
-
-    client.connect(brokerMioty, portMioty, 60)
-    client.loop_forever()
+import pandas as pd # Import pandas to read Excel files
+import sqlalchemy # Import sqlalchemy for inspecting tables
 
 # Load environment variables
 load_dotenv()
 
 # Initialize Flask app
-app = Flask(__name__)
+app = Flask(__name__, instance_relative_config=True)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'your-secret-key-here'
+# Configure the database URI. Ensure this matches your main app's config.
+# This example uses a SQLite database in the instance folder.
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///studyrooms.db').replace('postgres://', 'postgresql://')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # Recommended to disable this
 
 # Email configuration
 app.config['MAIL_SERVER'] = "mail.smtp2go.com"
@@ -102,16 +52,20 @@ login_manager.login_view = 'login'
 
 # ========== MODELS ==========
 class MiotyData(db.Model):
-    __tablename__ = 'mioty_data' # Asegúrate de que coincida con el nombre de la tabla
-    id = db.Column(db.Integer, primary_key=True)
-    key_code = db.Column(db.Integer, nullable=False) # Almacenar el valor entero de la tecla
-    noise = db.Column(db.Integer, nullable=False)
-    temperature = db.Column(db.Float, nullable=False) # Usar Float para la temperatura decimal
-    luminosity = db.Column(db.Integer, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow) # Para saber cuándo se recibió el dato
+    __tablename__ = 'mioty_data'
+
+    # Fields directly mapping to the file columns
+    # Using String for date and hour as they appear as text in the file
+    # Using them as a composite primary key as there is no unique ID in the file
+    sample_date = db.Column(db.String, primary_key=True)
+    sample_hour = db.Column(db.String, primary_key=True)
+    student_id = db.Column(db.Integer, nullable=True) # Student ID can be null
+    temperature = db.Column(db.Float, nullable=False) # Temperature has decimal values
+    luminosity = db.Column(db.Float, nullable=False) # Luminosity has decimal values
+    noise = db.Column(db.Float, nullable=False) # Noise has decimal values
 
     def __repr__(self):
-        return f'<MiotyData {self.timestamp}>'
+        return f'<MiotyData {self.sample_date} {self.sample_hour}>'
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -144,7 +98,7 @@ class Classroom(db.Model):
     name = db.Column(db.String(80), unique=True, nullable=False)
     capacity = db.Column(db.Integer, nullable=False)
     color = db.Column(db.String(20), default='#ff0404')
-    description = db.Column(db.Text)
+    description = db.Column(db.Text) # Corrected typo here
 
     reservations = db.relationship('Reservation', backref='classroom', lazy=True)
     # Add relationship to ReservationCodes. Creates 'classroom_rel' on ReservationCodes
@@ -377,7 +331,6 @@ def forgot_password():
         if user:
             token = secrets.token_urlsafe(32)
             user.reset_token = token
-            # Corrected typo in app.config key name
             user.reset_token_expires = datetime.utcnow() + timedelta(hours=app.config['RESET_TOKEN_EXPIRE_HOURS'])
             db.session.commit()
 
@@ -595,6 +548,7 @@ def cancel_reservation(reservation_id):
             app.logger.error(f"Error canceling reservation or deleting code: {str(e)}")
             flash("Error canceling reservation", "danger")
 
+
     return redirect(url_for('my_reservations'))
 
 # ========== ADMIN ROUTES ==========
@@ -617,10 +571,12 @@ def admin_dashboard():
         db.joinedload(Reservation.classroom)
     ).order_by(Reservation.start_time.desc()).all()
 
-    # *** CORRECCIÓN: Obtiene todos los mensajes de la tabla mioty_data ***
-    # Usa el modelo MiotyData para consultar la tabla 'mioty_data'
-    # Ordena los mensajes por timestamp de forma descendente para ver los más recientes primero
-    mioty_messages_list = MiotyData.query.order_by(MiotyData.timestamp.desc()).all()
+    # Obtiene todos los datos de la tabla mioty_data, que se rellena con el archivo Excel
+    # Ordena los mensajes por sample_date y sample_hour de forma descendente
+    mioty_data_list = MiotyData.query.order_by(
+        MiotyData.sample_date.desc(),
+        MiotyData.sample_hour.desc()
+    ).all()
 
 
     # Renderiza la plantilla HTML del panel de administración
@@ -630,7 +586,7 @@ def admin_dashboard():
         users=users,         # Lista de objetos User
         classrooms=classrooms, # Lista de objetos Classroom
         reservations=reservations, # Lista de objetos Reservation con user y classroom cargados
-        messages=mioty_messages_list, # <-- Lista de objetos MiotyData (los mensajes)
+        messages=mioty_data_list, # <-- Lista de objetos MiotyData (los datos del Excel)
         datetime=datetime    # Pasa el objeto datetime (opcional si no lo usas mucho en el template)
     )
 
@@ -640,7 +596,6 @@ def admin_dashboard():
 def manage_users():
     users = User.query.order_by(User.username).all()
     return render_template('admin_users.html', users=users, datetime=datetime)
-
 
 @app.route('/admin/users/edit/<int:user_id>', methods=['GET', 'POST'])
 @login_required
@@ -667,7 +622,6 @@ def edit_user(user_id):
 
     return render_template('edit_user.html', user=user, datetime=datetime)
 
-
 @app.route('/admin/users/delete/<int:user_id>', methods=['POST'])
 @login_required
 @admin_required
@@ -689,7 +643,6 @@ def delete_user(user_id):
         db.session.rollback()
         app.logger.error(f"Error deleting user {user_id}: {str(e)}")
         flash('Error deleting user', 'danger')
-
 
     return redirect(url_for('manage_users'))
 
@@ -780,7 +733,6 @@ def delete_classroom(classroom_id):
         app.logger.error(f"Error deleting classroom {classroom_id}: {str(e)}")
         flash('Error deleting classroom', 'danger')
 
-
     return redirect(url_for('manage_classrooms'))
 
 # ========== API ROUTES ==========
@@ -858,9 +810,20 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 def create_tables():
+    """Creates all database tables, dropping mioty_data if it exists."""
     with app.app_context():
-        # This will create User, Classroom, Reservation, and the correctly defined ReservationCodes tables
+        # Use inspector to check if the mioty_data table exists
+        inspector = sqlalchemy.inspect(db.engine)
+        if 'mioty_data' in inspector.get_table_names():
+            print("Dropping existing 'mioty_data' table...")
+            # Drop the table
+            MiotyData.__table__.drop(db.engine)
+            print("'mioty_data' table dropped.")
+
+        # This will create all tables defined in your models,
+        # including the newly dropped and recreated mioty_data table
         db.create_all()
+        print("Database tables created (or recreated for mioty_data).")
 
         # Create admin user if none exists
         if not User.query.filter_by(username='admin').first():
@@ -899,12 +862,123 @@ def create_tables():
 
         db.session.commit()
 
+
+# --- Function to load data from Excel ---
+def load_data_from_excel():
+    """Loads data from datos_inventados_V5.xlsx and populates the MiotyData table."""
+    # Construct the path to the Excel file in the instance folder
+    excel_file_path = os.path.join(app.instance_path, 'datos_inventados_V5.xlsx')
+    print(f"Attempting to load data from: {excel_file_path}")
+
+    # Check if the Excel file exists
+    if not os.path.exists(excel_file_path):
+        print(f"Error: File not found at {excel_file_path}")
+        print("Please ensure 'datos_inventados_V5.xlsx' is in the 'instance' folder.")
+        return
+
+    try:
+        # Read the Excel file into a pandas DataFrame
+        # Assuming the first sheet contains the data.
+        # Use 'decimal=',' to handle comma decimal separators if present in the file
+        df = pd.read_excel(excel_file_path, decimal=',')
+
+        # Clean column names: remove leading/trailing spaces and special characters if any
+        # This makes column access more reliable
+        df.columns = df.columns.str.strip().str.replace('[^A-Za-z0-9_]+', '', regex=True)
+
+        # --- DEBUGGING: Print the column names after cleaning ---
+        # This output is crucial for verifying the column names pandas is using
+        print("DataFrame columns after cleaning:", df.columns.tolist())
+        # ---------------------------------------------------------
+
+        # Prepare data for bulk insertion
+        data_to_add = []
+        # Iterate through DataFrame rows
+        for index, row in df.iterrows():
+            try:
+                # --- Handle 'Student ID' column specifically ---
+                # Get the value from the 'StudentID' column after cleaning
+                student_id_value = row.get('Student_ID', None)
+
+                # Explicitly check if the value is the string '---' or pandas NaN
+                if isinstance(student_id_value, str) and student_id_value.strip() == '---':
+                    processed_student_id = None # Treat "---" as None
+                elif pd.isna(student_id_value):
+                    processed_student_id = None # Treat pandas NaN as None
+                else:
+                    # Attempt to convert to integer, handle potential errors
+                    try:
+                        processed_student_id = int(student_id_value)
+                        print(f"{processed_student_id}")
+                    except (ValueError, TypeError):
+                        # If conversion fails (e.g., unexpected non-numeric string), treat as None
+                        print(f"Warning: Could not convert StudentID value '{student_id_value}' to integer in row {index}. Setting to None.")
+                        processed_student_id = None
+                # -----------------------------------------------
+
+                if str(row.get('Sample_Date', '')).endswith(' 00:00:00'):
+                    date_str = str(row.get('Sample_Date', '')).replace(' 00:00:00', '')
+                
+
+
+                # Create MiotyData object for each row
+                # Use .get() with a default value (like None) for other columns
+                # to handle potential missing columns more gracefully.
+                data_entry = MiotyData(
+                    # Ensure string format and strip whitespace for date and hour
+                    sample_date=date_str,
+                    sample_hour=str(row.get('Sample_Hour', '')).strip(),
+                    student_id=processed_student_id, # Use the processed student_id
+                    temperature=row.get('Tempc', None),
+                    luminosity=row.get('Light_LevelLux', None),
+                    noise=row.get('Noise_LeveldB', None)
+                )
+                data_to_add.append(data_entry)
+            except KeyError as e:
+                # This catch block helps identify exactly which column is missing if .get() wasn't used or failed
+                print(f"Error processing row {index}: Missing expected column {e}. Row data: {row.to_dict()}")
+                # Decide how to handle rows with missing data: skip, log, etc.
+                continue # Skip this row if a required column is missing
+            except Exception as e:
+                # Catch any other unexpected errors during object creation
+                print(f"Error creating MiotyData object for row {index}: {e}. Row data: {row.to_dict()}")
+                continue # Skip row on other errors
+
+        # Use app.app_context() to perform database operations
+        with app.app_context():
+            # Check if the table is already populated before adding data
+            # This check is less critical now that the table is dropped on each run,
+            # but it's a good practice if you remove the drop table logic later.
+            if MiotyData.query.first() is None:
+                print(f"Adding {len(data_to_add)} records to the database.")
+                # Use bulk_save_objects for efficient insertion of multiple records
+                db.session.bulk_save_objects(data_to_add)
+                db.session.commit() # Commit the transaction to save data
+                print("Data successfully loaded into the database.")
+            else:
+                print("Database table 'mioty_data' is already populated. Skipping data load.")
+
+
+    except FileNotFoundError:
+        print(f"Error: The file {excel_file_path} was not found.")
+    except pd.errors.EmptyDataError:
+        print(f"Error: The file {excel_file_path} is empty.")
+    except Exception as e:
+        # Catch any other exceptions during the overall loading process
+        print(f"An error occurred during data loading: {e}")
+
+
+# --- Main execution block ---
 if __name__ == '__main__':
-        create_tables()
-    
-    # Iniciar cliente MQTT en un hilo separado
-        mqtt_thread = threading.Thread(target=run_mqtt_client, daemon=True)
-        mqtt_thread.start()
-    
+    # Ensure the instance folder exists
+    if not os.path.exists(app.instance_path):
+        os.makedirs(app.instance_path)
+        print(f"Created instance folder: {app.instance_path}")
+
+    create_tables() # This will now drop and recreate mioty_data
+    load_data_from_excel() # Load data into the (newly created) mioty_data table
+
     # Iniciar aplicación Flask
+    with app.app_context():
         app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
+
