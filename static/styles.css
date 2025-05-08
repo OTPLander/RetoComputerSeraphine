@@ -161,7 +161,9 @@ body {
 .red-section {
     background-color: var(--tecnun-red);
     color: var(--tecnun-white);
-    padding: 40px 0;
+    padding: 20px 0;
+    width: 100%; /* Explicitly set width to 100% */
+    box-sizing: border-box; /* Include padding in the element's total width */
 }
 
 .white-section {
@@ -555,7 +557,7 @@ footer {
     margin-left: 10px;
 }
 
-/* Añadir a styles.css */
+/* Aï¿½adir a styles.css */
 .time-slots {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -677,4 +679,96 @@ footer {
     text-align: center;
     font-size: 0.9rem;
     /* Colors will be set by JavaScript based on status (green for success, red for error) */
+}
+
+/* Styles for the overall graphs section heading */
+.graphs-container h2 {
+    text-align: center;
+    color: var(--tecnun-dark-gray);
+    margin-bottom: 20px; /* Space below the heading */
+}
+
+/* Styles for the graph viewer container to mimic table container - Increased specificity */
+.graphs-container .graph-viewer {
+   margin-top: 20px; /* Similar spacing to table container */
+   border: 1px solid #ddd; /* Match table container border */
+   border-radius: 8px; /* Match table container border-radius */
+   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Match table container box-shadow */
+   background-color: var(--tecnun-white); /* Use the white background defined in root */
+   padding: 20px; /* Add some padding inside the container */
+   overflow: hidden; /* Hide potential overflow like the table container */
+}
+
+/* Styles for the container of individual graph items - Increased specificity */
+.graphs-container .graph-items {
+   min-height: 400px; /* Ensure a minimum height */
+   display: flex;
+   justify-content: center; /* Center the current graph */
+   align-items: center; /* Vertically center the current graph */
+   /* No border or background here, as the container has it */
+}
+
+/* Styles for the graph images - Increased specificity */
+.graphs-container .graph-items .graph-item img {
+   max-width: 100%; /* Ensure images are responsive */
+   height: auto; /* Maintain aspect ratio */
+   border: none; /* Remove border if container has one */
+   box-shadow: none; /* Remove shadow if container has one */
+   /* The display: block/none is handled by JavaScript */
+}
+
+/* Styles for the graph navigation container - Increased specificity */
+.graphs-container .graph-navigation {
+   margin-top: 20px;
+   display: flex;
+   justify-content: center;
+   align-items: center;
+   gap: 15px; /* Space between buttons and counter */
+}
+
+/* Styles for navigation buttons - Increased specificity */
+.graphs-container .graph-navigation button {
+   padding: 8px 16px; /* Slightly smaller padding for buttons */
+   background-color: var(--tecnun-red); /* Use Tecnun red for buttons */
+   color: var(--tecnun-white);
+   border: none;
+   border-radius: 4px; /* Slightly smaller border-radius */
+   cursor: pointer;
+   font-size: 0.9em; /* Slightly smaller font size */
+   transition: background-color 0.3s ease;
+}
+
+.graphs-container .graph-navigation button:hover {
+   background-color: #e00000; /* Darker red on hover */
+}
+
+.graphs-container .graph-navigation button:disabled {
+   background-color: #cccccc;
+   cursor: not-allowed;
+}
+
+/* Styles for the graph counter span - Increased specificity */
+.graphs-container .graph-navigation span {
+   font-size: 1em; /* Adjust font size */
+   font-weight: normal; /* Match table text weight */
+   color: var(--tecnun-dark-gray); /* Match table text color */
+}
+
+/* Optional: Style for the "No graphs" message - Increased specificity */
+.graphs-container .content-wrapper p { /* Targeting the paragraph within the content-wrapper */
+   font-size: 1em; /* Match table text size */
+   color: var(--tecnun-dark-gray); /* Match table text color */
+   text-align: center;
+   margin-top: 20px; /* Add some space above the message */
+}
+
+.header-container h1 {
+    flex-grow: 1; /* Allows the h1 to take up the available space */
+    text-align: center; /* Centers the text within the h1 */
+    margin: 0; /* Remove default h1 margin if it interferes */
+}
+
+.header-container .logo {
+    /* Ensure the logo doesn't grow and maintains its size */
+    flex-shrink: 0;
 }
